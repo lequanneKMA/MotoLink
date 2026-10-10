@@ -994,7 +994,7 @@ Checklist review: có consent của người tham gia thử
 ## 5. Definition of Done
 
 ### Chung (mọi task)
-Code + test viết cùng nhau; `go test ./... -race` / test Android xanh; lint xanh; không log tọa độ; tài liệu contract được cập nhật **trước** nếu thay đổi; metric/log cần thiết đã thêm; checklist review của task đã được tự đánh dấu; không TODO trần (mọi điểm mở vào `16`).
+Code + test viết cùng nhau; `go test ./... -race` / test Android xanh; lint xanh; không log tọa độ; tài liệu contract được cập nhật **trước** nếu thay đổi; metric/log cần thiết đã thêm; checklist review của task đã được tự đánh dấu; mọi điểm còn mở phải có nhãn và nằm trong `16`.
 
 ### Theo milestone
 | Milestone | DoD (ngoài chung) |
