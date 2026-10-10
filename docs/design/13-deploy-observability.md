@@ -130,7 +130,7 @@ api.motolink.example {
 Tên miền và DNS: `[GIẢ ĐỊNH]` đã có; Caddy lấy chứng chỉ tự động. WS qua Caddy không cần cấu hình đặc biệt ngoài `flush_interval` (xác minh khi dựng). Header `X-Forwarded-For` tin cậy chỉ từ Caddy.
 
 ### 2.1 Biến môi trường chính (`.env.example`)
-`APP_ENV`, `ROLES`, `HTTP_ADDR`, `METRICS_ADDR`, `DATABASE_URL`, `REDIS_ADDR`, `REDIS_PASSWORD`, `KAFKA_BROKERS`, `HISTORY_SINK` (`kafka|direct_pg`), `JWT_ED25519_PRIVATE_KEY_FILE`, `JWT_KID`, `FCM_CREDENTIALS_FILE`, `WS_MAX_CONNS`, `WS_MAX_CONNS_PER_IP`, `INSTANCE_ID` (mặc định sinh ngẫu nhiên), `LOG_LEVEL`, `DEBUG_LOG_COORDS` (cấm ở prod), `RETENTION_FULLRES_DAYS` (30), `RETENTION_PARTITION_DAYS` (90), `ARGON2_MAX_CONCURRENCY` (2).
+`APP_ENV`, `ROLES`, `HTTP_ADDR`, `METRICS_ADDR`, `DATABASE_URL`, `REDIS_ADDR`, `REDIS_PASSWORD`, `KAFKA_BROKERS`, `HISTORY_SINK` (`kafka|direct_pg`), `JWT_ED25519_PRIVATE_KEY_FILE`, `JWT_KID`, `FCM_CREDENTIALS_FILE`, `WS_MAX_CONNS`, `WS_MAX_CONNS_PER_IP`, `INSTANCE_ID` (mặc định sinh ngẫu nhiên), `TRUSTED_PROXY_HOPS` (số proxy tin cậy cho `X-Forwarded-For`; Render/Caddy = 1), `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL`, `OUTBOX_SINK` (`kafka|inproc`), `SHUTDOWN_TIMEOUT`, `LOG_LEVEL`, `DEBUG_LOG_COORDS` (cấm ở prod), `RETENTION_FULLRES_DAYS` (30), `RETENTION_PARTITION_DAYS` (90), `ARGON2_MAX_CONCURRENCY` (2).
 
 ### 2.2 Migration, health, shutdown
 - `migrate up` chạy một lần trước khi `server` khởi động (goose, SQL embed). Migration tương thích ngược một bản (expand/contract) để chạy 2 phiên bản cùng lúc khi rolling restart.

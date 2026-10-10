@@ -26,3 +26,26 @@ Xem `02-adr.md` (bảng tổng hợp) và `00-README.md` §3. Quyết định c�
 ## Việc còn lại
 
 Không còn việc thiết kế bắt buộc. Việc tiếp theo là của chủ dự án: duyệt/điều chỉnh các quyết định ở `16` §1, chuẩn bị máy thật cho spike M1, sau đó bắt đầu theo `17`.
+
+## Tiến độ code (nhánh `feat/m0-foundation`)
+
+Môi trường soạn code: không có Docker daemon; kiểm bằng PostgreSQL 16 + Redis 7 cài sẵn (`TEST_DATABASE_URL`, `TEST_REDIS_ADDR`). Go toolchain tự nâng lên 1.26 do dependency yêu cầu (Dockerfile dùng `golang:1.26`; `golangci-lint` cài sẵn build bằng Go 1.25 nên chưa chạy được local — CI dùng bản mới).
+
+| Task | Trạng thái | Ghi chú |
+|---|---|---|
+| M0-T01 monorepo + CI | xong | `server/`, `deploy/`, `.github/workflows/ci.yml`, `Makefile` |
+| M0-T02 compose dev | xong (chưa chạy thật) | `docker compose config` hợp lệ; **chưa `up`** vì sandbox không có Docker daemon — chạy thử trên máy bạn; tên biến `KAFKA_*` của image chưa xác minh (U9) |
+| M0-T03 platform | xong | config, logx (redaction), metrics, UUIDv7 |
+| M0-T04 migration | xong | `00001_baseline.sql` khớp `05`; test với PG thật |
+| M0-T05 golden contract | **chưa** | |
+| M0-T06 Android skeleton | **chưa** | cần Android SDK/máy thật |
+| M2-T01 identity | xong | register/login/refresh xoay vòng + phát hiện dùng lại/logout/logout-all, max 10 phiên, argon2id có semaphore |
+| M2-T02 middleware | xong | request id, recover, access log (không body), auth + thu hồi, rate limit, lỗi problem+json, metrics |
+| M2-T03 idempotency | xong | replay, 422 khác body, 409 đồng thời, không cache 5xx, theo user |
+| M2-T04.. trip, invitation, member, tracking-session | **chưa** | |
+
+Sai lệch có chủ đích so với tài liệu:
+- Truy vấn SQL viết tay bằng `pgx` (chưa dùng `sqlc`, chưa cài); chuyển sang `sqlc` khi số truy vấn tăng.
+- Test tích hợp dùng `TEST_DATABASE_URL`/`TEST_REDIS_ADDR` (tự bỏ qua nếu không đặt) thay vì testcontainers; CI cung cấp Postgres service. Redis test trong CI chưa bật.
+- `POST /auth/register` không dùng `Idempotency-Key` (xem `06`).
+- Bug tìm được khi test: (1) `NoopRevoker` làm phiên đã logout vẫn hợp lệ — sửa để fallback PostgreSQL; (2) khóa log `route` bị redaction nhầm là tọa độ — đổi thành `endpoint` + test hồi quy.

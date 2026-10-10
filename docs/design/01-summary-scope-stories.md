@@ -47,7 +47,7 @@ Quy ước: **US-x.y**; tiêu chí viết dạng Cho/Khi/Thì ngắn gọn. Liê
 ### Epic A — Tài khoản
 **US-A1 Đăng ký.** Là người dùng mới, tôi đăng ký bằng email và mật khẩu để có tài khoản.
 - Khi nhập email hợp lệ, mật khẩu ≥ 8 ký tự và tick hai ô đồng ý (điều khoản, quyền riêng tư), thì tài khoản được tạo, tôi được đăng nhập (`POST /auth/register`).
-- Khi email đã tồn tại, thì thấy lỗi rõ ràng; khi gửi lại cùng `Idempotency-Key`, không tạo tài khoản thứ hai.
+- Khi email đã tồn tại (không phân biệt hoa thường), thì thấy lỗi rõ ràng và không có tài khoản thứ hai nào được tạo, kể cả khi yêu cầu bị gửi lại hoặc gửi đồng thời.
 - Consent được ghi với phiên bản văn bản (`consent_records`).
 
 **US-A2 Đăng nhập/giữ phiên.** Tôi vẫn đăng nhập sau khi đóng app nhiều ngày.

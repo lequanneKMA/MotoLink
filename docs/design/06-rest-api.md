@@ -37,7 +37,7 @@ Ký hiệu: **IK** = cần `Idempotency-Key`. Cột "Bảng" trỏ về `05`.
 ### 2.1 Auth
 | Method & path | Quyền | Request | Response | Lỗi chính | IK | Bảng |
 |---|---|---|---|---|---|---|
-| `POST /auth/register` | public | `{email,password,display_name,device:{device_id,model,os_version,app_version,has_gms},consents:[{kind,version}]}` | `201 {user,access_token,expires_in,refresh_token}` | `409 email_taken`, `422 weak_password` | ✔ | users, devices, consent_records, refresh_tokens |
+| `POST /auth/register` | public | `{email,password,display_name,device:{device_id,model,os_version,app_version,has_gms},consents:[{kind,version}]}` | `201 {user,access_token,expires_in,refresh_token}` | `409 email_taken`, `422 validation_failed` (mật khẩu yếu/ngắn, thiếu consent) | — (khóa unique email chặn tạo tài khoản thứ hai khi gửi lại; không dùng `Idempotency-Key` vì chưa có `user_id`) | users, devices, consent_records, refresh_tokens |
 | `POST /auth/login` | public | `{email,password,device:{…}}` | `200 {user,access_token,expires_in,refresh_token}` | `401 invalid_credentials`, `429` | — | users, refresh_tokens, devices |
 | `POST /auth/refresh` | public (có refresh token) | `{refresh_token}` | `200 {access_token,expires_in,refresh_token}` (token xoay) | `401 invalid_refresh`, `401 refresh_reused` (đã thu hồi cả family) | — | refresh_tokens |
 | `POST /auth/logout` | any | `{}` (thu hồi family của `sid` hiện tại) | `204` | | — | refresh_tokens; Redis `revoked` |
