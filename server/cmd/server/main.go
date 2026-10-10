@@ -15,11 +15,14 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 
+	"motolink/internal/httpapi"
+	"motolink/internal/identity"
 	"motolink/internal/platform/config"
 	"motolink/internal/platform/httpx"
 	"motolink/internal/platform/logx"
 	"motolink/internal/platform/metrics"
 	"motolink/internal/platform/pg"
+	"motolink/internal/platform/ratelimit"
 )
 
 func main() {
@@ -58,16 +61,41 @@ func run(args []string) error {
 	defer pool.Close()
 
 	checks := []httpx.Check{{Name: "postgres", Fn: pool.Ping}}
+	var (
+		limiter ratelimit.Limiter = ratelimit.NewMemory()
+		revoker identity.Revoker  = identity.NoopRevoker{}
+	)
 	if cfg.RedisAddr != "" {
 		rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr, Password: cfg.RedisPass})
 		defer rdb.Close()
 		checks = append(checks, httpx.Check{Name: "redis", Fn: func(c context.Context) error { return rdb.Ping(c).Err() }})
+		limiter = ratelimit.Redis{C: rdb}
+		revoker = identity.NewRedisRevoker(rdb)
 	}
 
 	reg := metrics.New()
 	g, gctx := errgroup.WithContext(ctx)
 
-	api := &http.Server{Addr: cfg.HTTPAddr, Handler: httpx.HealthMux(checks...), ReadHeaderTimeout: 5 * time.Second}
+	root := http.NewServeMux()
+	root.Handle("/", httpx.HealthMux(checks...))
+	if cfg.Roles.API {
+		signer, err := identity.NewSigner(cfg.JWTPrivateKeyFile, cfg.JWTKeyID, cfg.AccessTTL, cfg.Env != "prod")
+		if err != nil {
+			return fmt.Errorf("jwt signer: %w", err)
+		}
+		if cfg.JWTPrivateKeyFile == "" {
+			log.Warn("using an ephemeral JWT signing key: all tokens become invalid on restart (dev/test only)")
+		}
+		svc := identity.NewService(identity.Deps{
+			DB: pool, Hasher: identity.NewHasher(identity.DefaultArgon(cfg.Argon2Concurrency)), Signer: signer,
+			Revoker: revoker, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL, Log: log,
+		})
+		a := &httpapi.API{Identity: svc, DB: pool, Limiter: limiter, Log: log,
+			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg}
+		root.Handle("/v1/", a.Handler())
+	}
+
+	api := &http.Server{Addr: cfg.HTTPAddr, Handler: root, ReadHeaderTimeout: 5 * time.Second}
 	g.Go(func() error { return httpx.Run(gctx, log, "api", api, cfg.ShutdownTimeout) })
 
 	mux := http.NewServeMux()
