@@ -1,6 +1,6 @@
 # MotoLink — Bộ tài liệu thiết kế kỹ thuật
 
-Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture`. Sinh theo mục 0 của `docs/prompt/MotoLink-planning-prompt.md`. **Chưa có implementation code** (đúng mục 0.5).
+Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture` (chỉ có commit cục bộ, chưa push vì repo chưa cấu hình remote). Sinh theo mục 0 của `docs/prompt/MotoLink-planning-prompt.md`. **Chưa có implementation code** (đúng mục 0.5).
 
 ## 1. Mục lục
 

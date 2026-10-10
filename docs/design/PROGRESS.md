@@ -1,6 +1,6 @@
 # PROGRESS — nhật ký tiến độ bộ tài liệu thiết kế MotoLink
 
-Nhánh làm việc: `docs/motolink-architecture`. Prompt gốc: `docs/prompt/MotoLink-planning-prompt.md` (mục 0). Trạng thái: **hoàn tất Phase A–E**, chờ chủ dự án duyệt (xem `16` §1 và `17` §1).
+Nhánh làm việc: `docs/motolink-architecture`. Prompt gốc: `docs/prompt/MotoLink-planning-prompt.md` (mục 0). Trạng thái: **hoàn tất Phase A–D, Phase E chưa push được (không có remote)**, chờ chủ dự án duyệt (xem `16` §1 và `17` §1).
 
 ## Trạng thái phase
 
@@ -8,7 +8,7 @@ Nhánh làm việc: `docs/motolink-architecture`. Prompt gốc: `docs/prompt/Mot
 - [x] Phase B — `02-adr`, `05-data-model`, `07-websocket-protocol`
 - [x] Phase C — 08, 09, 10, 06, 11, 12, 13, 14, 03, 04, 01, 15, 16, 17, 00, `appendix-CLAUDE.md`
 - [x] Phase D — review chéo (checklist 0.6 ghi ở cuối `00-README.md`); sửa mâu thuẫn
-- [x] Phase E — push nhánh `docs/motolink-architecture` (không tự merge, không tạo PR)
+- [~] Phase E — commit xong trên nhánh `docs/motolink-architecture` (không merge, không PR). **Push chưa thực hiện được: repo không có remote `origin`** (`git remote -v` rỗng); chủ dự án cần thêm remote rồi `git push -u origin docs/motolink-architecture`
 
 ## Nhật ký
 
