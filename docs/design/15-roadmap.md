@@ -6,8 +6,8 @@ Tham chiếu: prompt mục 10; ADR; contract `05`–`09`. Một developer, vừa
 
 | Điều chỉnh | Lý do |
 |---|---|
-| Giữ M1 (Android solo + spike nền) đứng **trước** backend | Rủi ro lớn nhất: OEM kill dịch vụ nền. Nếu thất bại phải đổi quyết định (xin quyền nền, đổi cách tiếp cận) trước khi xây hạ tầng |
-| Thêm **cổng quyết định (gate) sau M1** | Kết quả máy thật quyết định ADR-013 (có xin `ACCESS_BACKGROUND_LOCATION` không) và ADR-014 (nguồn tile) |
+| Giữ M1 (Android solo + spike nền) đứng **trước** backend | Rủi ro lớn nhất: OEM kill dịch vụ nền. Dù đã quyết định xin quyền nền (D-04), phải kiểm chứng trên máy thật rằng nó đủ hay không; nếu không đủ thì đổi cách tiếp cận trước khi xây hạ tầng |
+| Thêm **cổng quyết định (gate) sau M1** | Kết quả máy thật quyết định ADR-013 (quyền nền có đủ để tracking sống sót không) và ADR-014 (nguồn tile) |
 | M0 chỉ làm contract + scaffold tối thiểu; **M1 song song M0-T05/T06** | Contract-first nhưng không để M1 chờ |
 | M3 làm Hub với bộ nhớ trước, M4 mới thêm Redis | Dễ test concurrency thuần Go trước khi thêm I/O |
 | Chuyển REST `points` + ACK vào M5 (cùng Kafka) | Cùng ngữ nghĩa ACK; tránh làm hai lần |
@@ -184,7 +184,7 @@ Phụ thuộc:     M0-T01
 Song song với: M0-T05
 Input:         12 §1–2, ADR-018
 Output:        android/ (Gradle), app/ package theo 12 §2, targetSdk 36, minSdk 26
-Acceptance:    build debug + chạy trên máy; manifest KHÔNG có ACCESS_BACKGROUND_LOCATION; lint xanh
+Acceptance:    build debug + chạy trên máy; manifest khai báo ACCESS_BACKGROUND_LOCATION cùng FGS location (D-04); lint xanh
 Lệnh test:     ./gradlew :app:assembleDebug :app:testDebugUnitTest
 Kích thước:    M
 Checklist review: targetSdk 36 (S1); allowBackup=false; cleartext bị cấm ở release
@@ -878,7 +878,7 @@ Phụ thuộc:     M6-T06
 Song song với: M6-T07
 Input:         11 §5.2, U1
 Output:        docs/release/play-checklist.md (tạo khi làm), privacy policy nháp để luật sư xem
-Acceptance:    đọc lại trang chính sách Google Play gốc (U1) và cập nhật research; khai báo FGS; xác nhận không cần quyền nền (hoặc có kế hoạch nếu cần)
+Acceptance:    đọc lại trang chính sách Google Play gốc (U1) và cập nhật research; khai báo FGS; hoàn thành form vị trí nền (khai báo, video demo, prominent disclosure, core functionality) và bản nháp phản hồi nếu bị yêu cầu bổ sung
 Lệnh test:     —
 Kích thước:    M
 Checklist review: nhãn [CẦN XÁC NHẬN] pháp lý được xử lý

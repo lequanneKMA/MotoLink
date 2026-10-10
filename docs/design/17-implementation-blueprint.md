@@ -7,15 +7,15 @@ Dành cho bạn (chủ dự án) sau khi duyệt thiết kế. Thứ tự ở đ
 Xác nhận (trả lời ngắn gọn từng mục; mặc định ở `16` §1 sẽ được dùng nếu bạn không đổi):
 
 - [ ] **D-01** minSdk 26?
-- [ ] **D-02/D-03** Email + mật khẩu, hoãn quên mật khẩu & xác minh email cho beta kín?
-- [ ] **D-04** Không xin quyền vị trí nền ở MVP (xem lại sau gate M1)?
-- [ ] **D-05** Giữ Kafka (mục tiêu học) với lối thoát `direct_pg`?
+- [x] **D-02** Đăng nhập cơ bản trước, Google + Facebook sau (đã xác nhận 2026-10-10). [ ] **D-03** hoãn quên mật khẩu & xác minh email cho beta kín?
+- [x] **D-04** Xin đủ quyền chạy nền, gồm `ACCESS_BACKGROUND_LOCATION` (đã xác nhận 2026-10-10) — bắt đầu đọc chính sách Play gốc sớm (U1) và chuẩn bị video/disclosure.
+- [x] **D-05** Giữ Kafka với lối thoát `direct_pg` (đã xác nhận 2026-10-10) — nhưng xem tension với D-09.
 - [ ] **D-06/D-07** Retention 30/90/365 ngày; mặc định riêng tư lịch sử?
-- [ ] **D-09** Thông tin VPS (đĩa, **băng thông tháng**), tên miền, nơi lưu backup.
+- [ ] **D-09** Đã chọn "backend miễn phí" nhưng **chưa có nhà cung cấp cụ thể**: cho biết nơi chạy (RAM/CPU/đĩa/băng thông, có WebSocket + process chạy liên tục không), tên miền, nơi lưu backup. Chặn trước M4; M0–M3 chạy local.
 - [ ] **D-10/D-11** Một kết nối WS/user; trip tối đa 15; mã mời do owner tạo.
 - [ ] **D-14/D-19** Monorepo; tên app/package id.
 - [ ] **D-16** Nội dung cảnh báo "SOS không thay thế số khẩn cấp".
-- [ ] **D-18** Đã đọc §3 của `16` (cửa sổ mất dữ liệu) và chấp nhận.
+- [x] **D-18** Chấp nhận các cửa sổ mất dữ liệu ở §3 của `16`, cải thiện sau (đã xác nhận 2026-10-10).
 - [ ] Chuẩn bị **máy thật**: ≥ 1 Xiaomi/Oppo, ≥ 1 Samsung, và nếu có, 1 máy không GMS. Đây là điều kiện để làm M1.
 - [ ] Mở **luật sư/nguồn chính thức** cho D-08 song song (không chặn M0–M5, chặn beta rộng).
 
@@ -28,7 +28,7 @@ Bước 2  M0-T06  khung Android (song song)                        -- ngày 1-2
 Bước 3  M1-T01  SPIKE nền 60 phút trên máy thật                  -- ưu tiên SỐ 1
         M1-T06  SPIKE bản đồ/tile/chủ quyền (song song)
 Bước 4  M1-T03, T04, T02, T05, T07, T08                          -- hoàn tất M1
-Bước 5  GATE M1: đọc báo cáo, quyết định D-04, D-15, D-17; cập nhật ADR-013/014
+Bước 5  GATE M1: đọc báo cáo, quyết định D-15, D-17 (D-04 đã chốt: xin quyền nền); cập nhật ADR-013/014
 Bước 6  M0-T02..T05  hạ tầng dev + schema + golden (có thể làm xen kẽ trong lúc chờ test M1)
 Bước 7  M2   backend core (T01..T09, T11) -> M2-T10 Android
 Bước 8  M3   realtime (T01..T10)
@@ -46,7 +46,7 @@ Mục tiêu: có bằng chứng sớm về rủi ro lớn nhất, và nền tả
 **Ngày 1 — nền**
 - [ ] Tạo repo (monorepo) với layout `04` §1; thư mục `docs/` đã có; thêm `CLAUDE.md` từ `appendix-CLAUDE.md` (M0-T01).
 - [ ] `server/go.mod`, `cmd/server` rỗng, CI: `go vet`, lint, `go test -race`, `govulncheck`.
-- [ ] Khung Android `:app` build được, `targetSdk 36`, manifest **không** có quyền nền (M0-T06).
+- [ ] Khung Android `:app` build được, `targetSdk 36`, manifest khai báo `ACCESS_BACKGROUND_LOCATION` + FGS location (M0-T06, D-04).
 
 **Ngày 2–3 — spike nền (M1-T01)**
 - [ ] `TrackingService` tối thiểu: `foregroundServiceType="location"` + `FOREGROUND_SERVICE_LOCATION` + thông báo.
@@ -62,8 +62,8 @@ Mục tiêu: có bằng chứng sớm về rủi ro lớn nhất, và nền tả
 - [ ] Xác minh `pmtiles://` có/không được hỗ trợ (U5) → cập nhật `research/`.
 
 **Ngày 5 — chốt gate**
-- [ ] Viết kết luận M1; quyết định D-04, D-15, D-17; cập nhật ADR-013/014 và `16`.
-- [ ] Nếu mất nền nghiêm trọng: dừng, họp lại phương án (xin quyền nền + khai báo Play; đổi cách sử dụng; giảm kỳ vọng).
+- [ ] Viết kết luận M1; quyết định D-15, D-17 (D-04 đã chốt); cập nhật ADR-013/014 và `16`.
+- [ ] Nếu vẫn mất nền nghiêm trọng dù đã có quyền nền: dừng, họp lại phương án (đổi cách sử dụng; giảm kỳ vọng; hướng dẫn cài đặt theo hãng mạnh hơn). Nếu Play từ chối quyền nền: phương án lùi ở R-02.
 
 **Sau gate — việc code backend đầu tiên**
 - [ ] M0-T02 Compose dev stack (PG/Redis/Kafka) và đo RAM sơ bộ.

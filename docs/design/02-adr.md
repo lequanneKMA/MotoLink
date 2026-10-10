@@ -9,11 +9,11 @@ Nhãn: `[ĐÃ XÁC MINH]`, `[GIẢ ĐỊNH]`, `[CẦN XÁC NHẬN]`, `[CHƯA XÁ
 |---|---|---|
 | 001 | Modular monolith, một binary Go, nhiều "role" bật/tắt bằng config | Chốt |
 | 002 | Bộ thư viện Go: `net/http`, `coder/websocket`, `pgx`+`sqlc`, `goose`, `go-redis`, `franz-go`, `golang-jwt`, `slog` | Chốt (phiên bản pin khi code) |
-| 003 | Xác thực: email + mật khẩu (argon2id); access JWT EdDSA ngắn hạn + refresh token xoay vòng có phát hiện tái sử dụng; Google Sign-In để sau | Chốt, `[CẦN XÁC NHẬN]` |
+| 003 | Xác thực: email + mật khẩu (argon2id); access JWT EdDSA ngắn hạn + refresh token xoay vòng có phát hiện tái sử dụng; đăng nhập Google, Facebook thêm sau | Chốt (D-02 đã xác nhận 2026-10-10) |
 | 004 | Định danh & thứ tự: UUIDv7, `session_id` do server cấp, `seq` theo session, so sánh `(session_id, seq)` | Chốt |
 | 005 | Pipeline vị trí: đường **live** (Redis + Pub/Sub) tách khỏi đường **bền** (Kafka → PostgreSQL); ACK = đã ghi vào Kafka | Chốt |
 | 006 | Fan-out liên instance: Redis Pub/Sub, một channel mỗi trip, subscribe theo ref-count, lọc echo bằng `origin` | Chốt |
-| 007 | Kafka KRaft single node, `franz-go`, at-least-once + ghi PG idempotent; không tuyên bố exactly-once | Chốt, có lối thoát |
+| 007 | Kafka KRaft single node, `franz-go`, at-least-once + ghi PG idempotent; không tuyên bố exactly-once | Chốt, có lối thoát (D-05 xác nhận giữ Kafka; xem tension với D-09 ở `16`) |
 | 008 | Transactional outbox **chỉ** cho trip events và SOS; không dùng cho location | Chốt |
 | 009 | Hub: shard single-owner goroutine + outbox coalescing theo client | Chốt |
 | 010 | PostgreSQL thuần (không PostGIS ở MVP); `location_points` partition theo tháng; retention + downsampling | Chốt |
@@ -85,11 +85,11 @@ Phiên bản Go: `[CẦN XÁC NHẬN]` — khuyến nghị dùng stable mới nh
 
 ## ADR-003 — Xác thực và token
 
-**Context.** Thị trường Việt Nam. OTP SMS có chi phí mỗi tin và thủ tục nhà mạng/brandname `[CHƯA XÁC MINH]`. Một số máy không có GMS nên Google Sign-In (Credential Manager) không dùng được ở mọi máy.
+**Context.** Thị trường Việt Nam. OTP SMS có chi phí mỗi tin và thủ tục nhà mạng/brandname `[CHƯA XÁC MINH]`. Một số máy không có GMS nên Google Sign-In (Credential Manager) không dùng được ở mọi máy. Chủ dự án xác nhận (2026-10-10): trước mắt chỉ đăng nhập cơ bản, sau này tích hợp Google và Facebook.
 
 **Decision.**
 - MVP: **email + mật khẩu** (argon2id). Không bắt buộc xác minh email ở MVP `[GIẢ ĐỊNH]` (cần SMTP/nhà cung cấp email — chưa chọn); giảm rủi ro bằng rate limit đăng ký/đăng nhập theo IP và email. Quên mật khẩu **chưa có ở MVP** (ghi vào `16`); thay bằng "đăng xuất mọi thiết bị" và xóa tài khoản.
-- Google Sign-In: thêm sau (M6+) như phương thức thứ hai cho máy có GMS. Cột `google_sub` đã dự phòng ở schema.
+- Google Sign-In và Facebook Login: thêm sau (M6+) như phương thức bổ sung. Khi làm sẽ thêm bảng `auth_identities(provider, subject, user_id)` bằng migration (một user có nhiều identity); schema MVP **không** có cột cho nhà cung cấp ngoài. Điều kiện/review của Facebook Login và việc nó không cần GMS `[CHƯA XÁC MINH]` — tra cứu khi làm. Google cần GMS; máy không GMS vẫn dùng email + mật khẩu.
 - **Access token**: JWT ký EdDSA (Ed25519), TTL 15 phút, claims `sub` (user_id), `sid` (auth session id), `iat`, `exp`, `jti`. Không chứa quyền theo trip (quyền tra DB/cache mỗi lần — xem `11`).
 - **Refresh token**: chuỗi ngẫu nhiên 256 bit, lưu **hash SHA-256** trong `refresh_tokens`, TTL 60 ngày trượt, **xoay vòng mỗi lần dùng**; mỗi chuỗi xoay thuộc một `family_id`. Dùng lại token đã xoay → thu hồi cả family (phát hiện bị đánh cắp).
 - Thu hồi: logout (một family), logout-all (mọi family của user), đổi mật khẩu, xóa tài khoản. Access token đã phát vẫn sống tối đa 15 phút; với WS, server kiểm tra `sid` còn hợp lệ ở mỗi lần `auth.refresh` và nhận sự kiện thu hồi qua Redis channel `ml:user:<user_id>` để đóng kết nối ngay (xem `08`, `10`).
@@ -267,7 +267,7 @@ Chi tiết bảng chuyển trạng thái ở `05-data-model.md` §Máy trạng t
 **Decision.**
 - `LocationSource` là interface với hai triển khai: **Fused Location Provider** (khi có Google Play Services) và **`LocationManager` GPS/Network** (khi không có GMS). Chọn lúc chạy bằng kiểm tra khả dụng GMS.
 - Chỉ thu GPS khi người dùng chủ động bấm "Bắt đầu" → **Foreground Service** với `foregroundServiceType="location"`, kèm notification liên tục có nút "Tạm dừng"/"Kết thúc". Khai báo `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION` `[ĐÃ XÁC MINH: S2]`.
-- Quyền: xin foreground location (`ACCESS_FINE_LOCATION`, chấp nhận xấp xỉ nhưng cảnh báo tính năng giảm) → bắt đầu service trong khi app ở foreground (**FGS location không thể khởi tạo từ nền nếu thiếu `ACCESS_BACKGROUND_LOCATION`** `[ĐÃ XÁC MINH: S2]`) → **chỉ khi cần** (ví dụ tự khởi động lại tracking sau khi bị kill, hoặc nhận lệnh từ nền) mới xin `ACCESS_BACKGROUND_LOCATION` bằng luồng Android 11+ qua Settings `[ĐÃ XÁC MINH: S3]`. **Quyết định: MVP KHÔNG xin `ACCESS_BACKGROUND_LOCATION`**, vì dịch vụ luôn được khởi chạy khi người dùng đang mở app và chạy tiếp như FGS; điều này giảm đáng kể gánh nặng review chính sách của Google Play `[CHƯA XÁC MINH: U1]`. Đánh đổi: nếu process bị OEM kill, tracking **không tự phục hồi từ nền** — người dùng phải mở lại app. Quyết định này cần được kiểm chứng ở spike M1; nếu thực tế mất nền quá thường xuyên thì xem xét xin quyền nền (`16`).
+- Quyền (**D-04 đã xác nhận 2026-10-10: xin đủ quyền để chạy nền**): (1) consent/prominent disclosure → (2) `ACCESS_FINE_LOCATION` foreground (chấp nhận xấp xỉ nhưng cảnh báo giảm tính năng) → (3) `POST_NOTIFICATIONS` (Android 13+) → (4) **`ACCESS_BACKGROUND_LOCATION`** qua luồng Android 11+ (giải thích rồi mở trang Settings, dùng nhãn từ `getBackgroundPermissionOptionLabel()`, người từ chối vẫn dùng được app) `[ĐÃ XÁC MINH: S3]` → (5) hướng dẫn bỏ tối ưu pin theo hãng (xem `12` §5). Lý do: có quyền nền thì FGS `location` mới có thể được khởi tạo lại khi app ở nền, ví dụ tự phục hồi tracking sau khi process bị kill `[ĐÃ XÁC MINH: S2]` (chưa đủ để chắc chắn phục hồi được trên mọi ROM, phải kiểm ở M1). Đánh đổi: Google Play yêu cầu form khai báo vị trí nền, video demo, prominent disclosure và chứng minh "core functionality" `[CHƯA XÁC MINH: U1]` — có nguy cơ bị từ chối nếu Google coi foreground là đủ; chuẩn bị từ M1/M6 (R-02). Vẫn **chỉ thu GPS khi người dùng đã bấm Bắt đầu**; quyền nền không có nghĩa là thu thường trực.
 - `targetSdk = 36` `[ĐÃ XÁC MINH: S1]`; `minSdk = 26` `[GIẢ ĐỊNH]`, `[CẦN XÁC NHẬN]`.
 - **Khắc phục được:** giữ FGS đúng type; hướng dẫn tắt tối ưu pin/ cho phép tự khởi động; ghi điểm vào Room liên tục để mất nền không mất điểm đã ghi; tự phát hiện "khoảng trống" và hiển thị cho người dùng. **Không khắc phục được chỉ bằng retry/WorkManager:** OEM kill FGS/process (Xiaomi/Oppo/Vivo...) mà không báo; WorkManager không thể lấy GPS liên tục; máy không GMS không có FCM. Mô tả trung thực trong `12`.
 
@@ -313,7 +313,7 @@ Chi tiết bảng chuyển trạng thái ở `05-data-model.md` §Máy trạng t
 
 ## ADR-017 — Triển khai và quan sát
 
-**Decision.** Docker Compose trên 1 VPS: `caddy` (TLS tự động, reverse proxy, WS), `server` (1..N), `postgres`, `redis`, `kafka`, `prometheus`, `grafana` (tùy chọn khi thiếu RAM). Migration chạy bằng service một lần. Backup PG bằng `pg_dump` định kỳ + `pg_basebackup`/WAL archiving là tùy chọn sau; ngoài VPS (object storage). Metrics theo mục 9 prompt; tracing OTel hoãn. Chi tiết `13`.
+**Decision.** Docker Compose trên 1 host Linux (VPS hoặc máy miễn phí/tự có — D-09, chưa chọn; xem R-21): `caddy` (TLS tự động, reverse proxy, WS), `server` (1..N), `postgres`, `redis`, `kafka`, `prometheus`, `grafana` (tùy chọn khi thiếu RAM). Migration chạy bằng service một lần. Backup PG bằng `pg_dump` định kỳ + `pg_basebackup`/WAL archiving là tùy chọn sau; ngoài VPS (object storage). Metrics theo mục 9 prompt; tracing OTel hoãn. Chi tiết `13`.
 
 ---
 
@@ -331,7 +331,7 @@ Chi tiết bảng chuyển trạng thái ở `05-data-model.md` §Máy trạng t
 
 ## ADR-020 — Cắt scope MVP
 
-Không làm: bắt đầu tracking khi chưa có mạng (cần `session_id` do server cấp; xem `11` §7.1); trip-level pause; quên mật khẩu; Google Sign-In (M6+); offline map; chat/voice; geofence; so sánh/ chia sẻ công khai; đa thiết bị đồng thời cho cùng một session; sửa/thu hồi mã mời hàng loạt; web client; iOS; reinstate thành viên bị xóa; tracing OTel; PostGIS.
+Không làm: đăng nhập Google/Facebook ở MVP (có kế hoạch, M6+); bắt đầu tracking khi chưa có mạng (cần `session_id` do server cấp; xem `11` §7.1); trip-level pause; quên mật khẩu; offline map; chat/voice; geofence; so sánh/ chia sẻ công khai; đa thiết bị đồng thời cho cùng một session; sửa/thu hồi mã mời hàng loạt; web client; iOS; reinstate thành viên bị xóa; tracing OTel; PostGIS.
 Có thể làm sớm nếu rẻ: `transfer-ownership` (cần để owner rời trip).
 
 ---

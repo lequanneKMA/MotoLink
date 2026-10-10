@@ -10,7 +10,7 @@ Tham chiếu: ADR-013 (vị trí/nền/OEM), ADR-014 (bản đồ), ADR-018 (ki�
 | `compileSdk` | ≥ 36 | suy ra |
 | `minSdk` | 26 (Android 8.0) | `[GIẢ ĐỊNH]`, `[CẦN XÁC NHẬN]` (U6: chưa có số liệu phân bố tại VN). Lý do chọn: thông báo kênh (channel) sẵn có, bỏ phần lớn nhánh tương thích cũ, vẫn phủ máy cũ; hạ xuống 24 nếu số liệu cho thấy cần |
 | Ngôn ngữ UI | Tiếng Việt (chuỗi trong `strings.xml`, sẵn sàng thêm `en`) | |
-| Khai báo manifest | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS` (Android 13+), `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK` (nếu cần), **không** `ACCESS_BACKGROUND_LOCATION` ở MVP | S2, ADR-013 |
+| Khai báo manifest | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS` (Android 13+), `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK` (nếu cần), **`ACCESS_BACKGROUND_LOCATION`** (D-04) | S2, ADR-013 |
 
 ## 2. Cấu trúc package (single module `:app`)
 
@@ -94,9 +94,9 @@ Mọi điểm: bỏ nếu `accuracy > 50 m` (ngưỡng client; server nhận t�
 1. **Consent riêng** (màn hình disclosure, `11` §5.1) → người dùng đồng ý.
 2. Xin `ACCESS_FINE_LOCATION` (+ coarse) "khi dùng ứng dụng" (ngữ cảnh: bấm *Bắt đầu*). Android 12+: nếu người dùng chọn chỉ *Xấp xỉ* ⇒ cho phép nhưng cảnh báo "Vị trí sẽ kém chính xác" `[ĐÃ XÁC MINH: S3]`.
 3. Android 13+: xin `POST_NOTIFICATIONS` để thấy thông báo FGS (không từ chối thì tracking vẫn chạy nhưng thông báo bị ẩn khỏi người dùng — vẫn hiện trong Task Manager FGS; nhắc người dùng bật).
-4. Khởi động `TrackingService` **khi app đang ở foreground** (người dùng vừa bấm nút) bằng `startForegroundService` + `startForeground(type=location)`. FGS `location` không thể khởi tạo từ nền nếu thiếu quyền nền `[ĐÃ XÁC MINH: S2]` ⇒ mọi điểm khởi tạo phải từ tương tác người dùng.
+4. Khởi động `TrackingService` khi người dùng bấm *Bắt đầu* (app ở foreground) bằng `startForegroundService` + `startForeground(type=location)`. FGS `location` chỉ khởi tạo được từ nền khi đã có quyền nền `[ĐÃ XÁC MINH: S2]` ⇒ có quyền nền thì tự phục hồi sau khi bị kill là khả thi về mặt API (kiểm ở M1), không có thì mọi lần khởi tạo phải từ tương tác người dùng.
 5. Đề nghị "Bỏ qua tối ưu pin" qua `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` **chỉ khi** người dùng đã thấy hiện tượng mất nền hoặc qua mục hướng dẫn trong Cài đặt (Google Play có chính sách riêng về quyền này `[CHƯA XÁC MINH]` ⇒ ưu tiên dẫn tới trang cài đặt pin thay vì quyền `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` trong manifest).
-6. **Không** xin quyền nền (ADR-013). Nếu spike M1 cho thấy cần, sẽ thêm luồng: giải thích → mở Settings đúng trang với nhãn từ `getBackgroundPermissionOptionLabel()` → xử lý từ chối `[ĐÃ XÁC MINH: S3]`.
+6. **Xin quyền nền** (D-04, ADR-013) sau khi đã có quyền foreground, *chỉ trong ngữ cảnh người dùng đang bật tracking*: màn hình giải thích (cho biết thu cả khi màn hình tắt) → mở trang Settings đúng với nhãn từ `getBackgroundPermissionOptionLabel()` → xử lý từ chối (app vẫn dùng được, tracking chạy khi app/FGS còn sống) `[ĐÃ XÁC MINH: S3]`. Nếu người dùng chỉ cấp vị trí xấp xỉ thì quyền nền cũng chỉ xấp xỉ.
 
 ### 5.2 Ba trạng thái xử lý vị trí
 
@@ -115,7 +115,7 @@ Chi tiết hành vi theo ROM `[CHƯA XÁC MINH: U13]` — **kết quả M1 trên
 - Ghi điểm vào Room liên tục ⇒ **không mất điểm đã ghi** khi bị kill.
 - Phát hiện gián đoạn: khi mở lại app, nếu `local_session.status='active'` nhưng service không chạy ⇒ hiển thị "Chuyến ghi bị gián đoạn lúc HH:MM", đánh dấu khoảng trống, đề nghị tiếp tục (session cũ hoặc mới).
 - Server phát hiện `timeout` (không điểm > 10 phút `[GIẢ ĐỊNH]`): gửi thông báo FCM "Việc ghi vị trí của bạn bị gián đoạn — chạm để tiếp tục" (loại `tracking_interrupted`, chỉ máy có GMS) và báo cho người xem bằng presence `offline` + vị trí "cũ".
-- `START_STICKY` + khôi phục từ Room: có thể giúp trên một số ROM, **không** đáng tin; và khởi chạy lại FGS location từ nền có thể bị chặn do thiếu quyền nền `[ĐÃ XÁC MINH: S2]` — kiểm chứng ở M1 và **không dựa vào** hành vi này.
+- `START_STICKY` + khôi phục từ Room: có thể giúp trên một số ROM, **không** đáng tin; có quyền nền thì việc khởi chạy lại FGS location từ nền được phép về API `[ĐÃ XÁC MINH: S2]` nhưng ROM vẫn có thể chặn khởi động nền — kiểm chứng ở M1 và **không dựa hẳn** vào hành vi này.
 
 **Không khắc phục được chỉ bằng retry / WorkManager:**
 - Một số ROM kill process và chặn mọi khởi động nền (kể cả FGS) khi người dùng vuốt app khỏi Recents hoặc tiết kiệm pin: không có API công khai để chống lại. `WorkManager` không thể thu GPS liên tục (chỉ chạy ngắt quãng, không phải real-time), và cũng bị hạn chế bởi cùng chính sách.

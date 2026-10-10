@@ -74,7 +74,7 @@ Nguyên tắc: **một hàm kiểm quyền duy nhất theo (user, trip, hành đ
 ### 5.2 Google Play
 - `targetSdk=36` `[ĐÃ XÁC MINH: S1]` (hạn 31/08/2026; đã quá hạn nên bắt buộc với bản đăng mới).
 - Khai báo FGS type `location` + permission `FOREGROUND_SERVICE_LOCATION` `[ĐÃ XÁC MINH: S2]`; Play Console yêu cầu khai báo mục đích foreground service `[CHƯA XÁC MINH: U1]`.
-- **Không xin `ACCESS_BACKGROUND_LOCATION` ở MVP** (ADR-013) ⇒ tránh được form "vị trí nền" + video; nếu về sau phải xin, thực hiện luồng Android 11+ qua Settings `[ĐÃ XÁC MINH: S3]` và nộp khai báo/video/disclosure `[CHƯA XÁC MINH: U1]`.
+- **Xin `ACCESS_BACKGROUND_LOCATION`** (D-04, ADR-013) ⇒ phải nộp form khai báo "Location permissions" ở Play Console, video demo (runtime prompt, prominent disclosure, tính năng chạy từ nền) và chứng minh core functionality `[CHƯA XÁC MINH: U1]`; disclosure phải nói rõ vị trí được thu "cả khi ứng dụng đóng hoặc không dùng" khi có chuyến đang ghi. Luồng xin quyền: `12` §5.1 `[ĐÃ XÁC MINH: S3]`. Rủi ro bị từ chối: R-02.
 - Data safety form: khai báo vị trí chính xác, mục đích "chức năng ứng dụng", chia sẻ với thành viên khác trong nhóm, có thể xóa theo yêu cầu, mã hóa khi truyền `[CẦN XÁC NHẬN]` theo form hiện hành.
 - Privacy policy URL công khai, trong app và trên store listing.
 

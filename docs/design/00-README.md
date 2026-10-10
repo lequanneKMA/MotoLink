@@ -40,21 +40,21 @@ Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture` (chỉ có commit
 |---|---|---|
 | 001 | Modular monolith, một binary, `ROLES` | Chốt |
 | 002 | Bộ thư viện Go (phiên bản tra 2026-10-10) | Chốt, pin khi code |
-| 003 | Email + mật khẩu; JWT EdDSA 15' + refresh xoay vòng | Chốt — D-02/D-03 chờ xác nhận |
+| 003 | Email + mật khẩu trước; Google/Facebook sau; JWT EdDSA 15' + refresh xoay vòng | Chốt — D-02 đã xác nhận; D-03 chờ |
 | 004 | UUIDv7, `session_id` server cấp, `(session_id, seq)` | Chốt |
 | 005 | Live path tách khỏi durable path; ACK = đã vào Kafka | Chốt |
 | 006 | Redis Pub/Sub per-trip, ref-count, lọc echo | Chốt |
-| 007 | Kafka KRaft 1 node, at-least-once + sink idempotent; lối thoát `direct_pg` | Chốt — D-05 |
+| 007 | Kafka KRaft 1 node, at-least-once + sink idempotent; lối thoát `direct_pg` | Chốt — D-05 đã xác nhận giữ Kafka (tension với D-09) |
 | 008 | Outbox cho trip event/SOS | Chốt |
 | 009 | Hub shard single-owner + coalescing | Chốt |
 | 010 | PG không PostGIS; partition tháng; retention | Chốt — D-06 |
 | 011 | WS envelope, cursor `event_seq`, resume/snapshot | Chốt |
 | 012 | State machines (không pause cấp trip) | Chốt |
-| 013 | FGS location, Fused + fallback; **không** xin quyền nền | Chốt hướng — **gate M1**, D-04 |
+| 013 | FGS location, Fused + fallback; **xin quyền nền** (D-04 đã xác nhận) | Chốt — kiểm ở **spike M1**; rủi ro review Play (R-02) |
 | 014 | MapLibre + tile do mình kiểm soát; không tile OSM công cộng | Chốt hướng — **spike M1**, D-15 |
 | 015 | SOS: PG sự thật, WS + FCM, dedupe | Chốt — D-16 |
 | 016 | Riêng tư mặc định + consent | Chốt — D-08 (pháp lý) |
-| 017 | Compose, Caddy, Prometheus/Grafana | Chốt — D-09 |
+| 017 | Compose, Caddy, Prometheus/Grafana | Chốt cho 1 host; **D-09: dùng hạ tầng miễn phí, chưa chọn nhà cung cấp (R-21)** |
 | 018 | Android single-module, OkHttp/Retrofit | Chốt — D-13 |
 | 019 | Offline-first, `outbox_ops` | Chốt |
 | 020 | Cắt scope MVP | Chốt |

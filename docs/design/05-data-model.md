@@ -38,7 +38,6 @@ erDiagram
         uuid id PK
         text email UK
         text password_hash
-        text google_sub UK
         text display_name
         timestamptz deleted_at
     }
@@ -143,8 +142,7 @@ CREATE TABLE users (
   id              uuid PRIMARY KEY,
   email           text NOT NULL,
   email_verified  boolean NOT NULL DEFAULT false,
-  password_hash   text,                       -- argon2id; NULL nếu chỉ dùng Google (sau này)
-  google_sub      text,
+  password_hash   text,                       -- argon2id; NULL nếu sau này chỉ đăng nhập qua Google/Facebook
   display_name    text NOT NULL CHECK (char_length(display_name) BETWEEN 1 AND 50),
   avatar_color    text NOT NULL DEFAULT '#2E7D32',
   locale          text NOT NULL DEFAULT 'vi',
@@ -153,7 +151,7 @@ CREATE TABLE users (
   deleted_at      timestamptz                 -- soft delete; job xóa dữ liệu phụ thuộc
 );
 CREATE UNIQUE INDEX users_email_uk ON users (lower(email)) WHERE deleted_at IS NULL;
-CREATE UNIQUE INDEX users_google_sub_uk ON users (google_sub) WHERE google_sub IS NOT NULL;
+-- Đăng nhập Google/Facebook (sau MVP): bảng auth_identities(provider, subject, user_id) thêm bằng migration, xem ADR-003.
 
 CREATE TABLE refresh_tokens (
   id            uuid PRIMARY KEY,

@@ -9,14 +9,14 @@ Nhãn: `[GIẢ ĐỊNH]` (tôi đã chọn mặc định hợp lý và tiếp t�
 | ID | Quyết định | Khuyến nghị / mặc định | Chặn? | Ảnh hưởng |
 |---|---|---|---|---|
 | D-01 | `minSdk` | **26** `[GIẢ ĐỊNH]` (không có số liệu phân bố VN: U6). `targetSdk=36` đã xác minh (S1) | Trước M0-T06 | Phạm vi máy hỗ trợ, code tương thích |
-| D-02 | Phương thức xác thực MVP | **Email + mật khẩu**; Google Sign-In sau; **không** OTP SMS (chi phí, thủ tục) (ADR-003) | Trước M2-T01 | Thiết kế auth, nhà cung cấp email |
+| D-02 ✅ | Phương thức xác thực MVP | **Đã xác nhận 2026-10-10:** đăng nhập cơ bản (email + mật khẩu) trước; sau này tích hợp **Google và Facebook**; không OTP SMS (ADR-003) | Trước M2-T01 | Thiết kế auth, nhà cung cấp email |
 | D-03 | Quên mật khẩu & xác minh email | **Hoãn** cả hai ở MVP (cần nhà cung cấp email); chấp nhận cho beta kín; bắt buộc trước phát hành rộng | Trước M6-T09 | Rủi ro R-12/R-13 |
-| D-04 | Quyền vị trí nền | **Không xin** `ACCESS_BACKGROUND_LOCATION` ở MVP (ADR-013). Xem lại sau gate M1 | Gate M1 | Tuân thủ Play, khả năng tự phục hồi tracking |
-| D-05 | Giữ Kafka hay dùng `direct_pg` mặc định | **Giữ Kafka** (mục tiêu học) với lối thoát `HISTORY_SINK=direct_pg` (ADR-007). Quyết định lại sau M5 theo RAM đo thực | Trước M5 | RAM VPS, độ phức tạp vận hành |
+| D-04 ✅ | Quyền vị trí nền | **Đã xác nhận 2026-10-10: xin đủ quyền để app chạy nền** — `ACCESS_BACKGROUND_LOCATION` + FGS `location` + hướng dẫn bỏ tối ưu pin (ADR-013, `12` §5.1). Hệ quả: phải làm form vị trí nền Play + video + disclosure (R-02); spike M1 vẫn kiểm xem có đủ chống OEM kill không | Spike M1 / M6-T08 | Review Google Play, khả năng tự phục hồi tracking |
+| D-05 ✅ | Giữ Kafka hay dùng `direct_pg` mặc định | **Đã xác nhận 2026-10-10: giữ Kafka** (mục tiêu học) với lối thoát `HISTORY_SINK=direct_pg` (ADR-007). **Tension với D-09:** nếu hạ tầng miễn phí không đủ RAM cho Kafka thì phải chọn lại (xem R-21) | Trước M5 | RAM host, độ phức tạp vận hành |
 | D-06 | Số liệu retention | Điểm thô **30 ngày**, partition **90 ngày**, trip lưu **365 ngày** sau archive, outbox/idempotency theo `05` §6 `[GIẢ ĐỊNH]` | Trước M6-T01 | Dung lượng đĩa (`13` §4.2), quyền riêng tư |
 | D-07 | Mặc định riêng tư lịch sử | `history_visibility='members'`, mỗi người tắt được `share_history`; owner **không** có đặc quyền xem thêm | Trước M2-T04 | Schema/quyền |
 | D-08 | Pháp lý (không phải tư vấn pháp lý) | Luật sư xác nhận: (a) hiệu lực NĐ 13/2023 so với NĐ 356/2025 (S7 mâu thuẫn); (b) vị trí chính xác có là dữ liệu nhạy cảm; (c) nội dung consent/thông báo; (d) chuyển dữ liệu ra nước ngoài (FCM, hạ tầng); (e) người dưới 18; (f) có phải lập hồ sơ đánh giá tác động; (g) quyền xuất dữ liệu `GET /me/export` | Trước M6-T06/T08 | Màn hình consent, privacy policy, Play form |
-| D-09 | Hạ tầng thực tế | Cung cấp: nhà cung cấp VPS, dung lượng đĩa, **hạn mức băng thông tháng**, vùng; tên miền; nơi lưu backup ngoài VPS; nhà cung cấp email (nếu D-03 làm) | Trước M7-T03/T04 (băng thông: trước M4) | `13` §4: cả băng thông ra ≈ 147 GB/tháng ở kịch bản xấu |
+| D-09 ⚠️ | Hạ tầng thực tế | **Chủ dự án chọn (2026-10-10): dùng backend miễn phí, không thuê VPS** `[GIẢ ĐỊNH]` cách hiểu: hosting free-tier/tự có máy. **Chưa chọn nhà cung cấp cụ thể** và tôi chưa tra điều kiện free-tier nào `[CHƯA XÁC MINH]`. Còn cần: nhà cung cấp, RAM/CPU/đĩa thực tế, hạn mức băng thông, có cho process chạy liên tục + WebSocket + cổng TCP riêng không, tên miền + TLS, nơi lưu backup, nhà cung cấp email (nếu D-03 làm). **Tension:** thiết kế `13` giả định 1 VPS 2 vCPU/4 GB chạy Postgres + Redis + Kafka + Go; free-tier thường không đáp ứng (xem R-21) | M0 dev local không bị chặn; **chặn trước M4** (cần host cho test 2 instance) và M7 | `13` §4; ADR-017; ADR-007 |
 | D-10 | Một kết nối WS mỗi user | **Có** (kết nối mới thay cũ, 4409); không hỗ trợ đa thiết bị đồng thời | Trước M3-T02 | Presence, UX đổi máy |
 | D-11 | Giới hạn trip | Tối đa **15** thành viên; chỉ owner tạo mã mời; mã 8 ký tự, hạn mặc định 24 giờ | Trước M2-T05 | Schema `max_members`, UX |
 | D-12 | Phiên bản công nghệ | Go (stable mới nhất khi bắt đầu), PostgreSQL major, Redis, Caddy, Prometheus, Grafana, tag Kafka: chốt và ghim digest ở M0 (U10); thư viện Android ghim ở M1 (U11) | M0-T01/T02, M1 | Reproducibility |
@@ -25,15 +25,15 @@ Nhãn: `[GIẢ ĐỊNH]` (tôi đã chọn mặc định hợp lý và tiếp t�
 | D-15 | Nguồn tile | Quyết định ở spike M1-T06 giữa tự host (PMTiles/tile server) và thương mại — phải đạt tiêu chí chủ quyền VN + ToS | Gate M1 | ADR-014, chi phí |
 | D-16 | Tuyên bố giới hạn SOS | App **không thay thế** số khẩn cấp; hiển thị cảnh báo khi onboarding và trên màn hình SOS ("gọi 113/114/115 khi nguy hiểm tính mạng" — số điện thoại và nội dung cần xác nhận) | Trước M6-T04 | Trách nhiệm/pháp lý, kỳ vọng người dùng |
 | D-17 | Ngưỡng nghiệm thu thực địa | Pin/giờ, tỉ lệ mất nền chấp nhận được: chốt sau M1 với số đo thật | Gate M1 | DoD M7 |
-| D-18 | Chấp nhận các cửa sổ mất dữ liệu ở §3 | Xác nhận đã đọc và chấp nhận (đặc biệt RF=1, backup 24 giờ) | Trước M5 | Kỳ vọng độ tin cậy |
+| D-18 ✅ | Chấp nhận các cửa sổ mất dữ liệu ở §3 | **Đã xác nhận 2026-10-10: chấp nhận, sẽ cải thiện sau** (nâng cấp PITR/replica/RF khi có người dùng thật). Lưu ý: nếu D-09 chuyển sang free-tier có đĩa/backup yếu hơn thì cửa sổ L-5 có thể rộng hơn §3 mô tả — cần đánh giá lại khi chọn host | Trước M5 | Kỳ vọng độ tin cậy |
 | D-19 | Tên app, package id, tên miền API | Đề xuất tạm `MotoLink`, `app.motolink` (placeholder) | Trước M0-T06 | Manifest, chứng chỉ |
 
 ## 2. Rủi ro lớn nhất (xếp theo mức nghiêm trọng)
 
 | ID | Rủi ro | Khả năng | Tác động | Giảm thiểu / kế hoạch | Mốc |
 |---|---|---|---|---|---|
-| R-01 | **OEM kill dịch vụ nền** (Xiaomi/Oppo/Vivo/Samsung): mất GPS khi màn hình tắt; không có API công khai khắc phục triệt để | Cao | Rất cao (làm mất giá trị cốt lõi) | Spike M1 trên máy thật; hướng dẫn cài đặt theo hãng; ghi Room để không mất điểm đã ghi; phát hiện + thông báo gián đoạn; gate M1 quyết định có xin quyền nền hay đổi kỳ vọng sản phẩm (ADR-013, `12` §5.3) | M1 |
-| R-02 | Google Play từ chối/đòi bổ sung do dùng vị trí/FGS; chính sách chưa đọc được nguồn gốc (U1) | Trung bình | Cao | Không xin quyền nền; prominent disclosure; đọc lại chính sách gốc ở M6-T08; sideload APK cho beta | M6 |
+| R-01 | **OEM kill dịch vụ nền** (Xiaomi/Oppo/Vivo/Samsung): mất GPS khi màn hình tắt; không có API công khai khắc phục triệt để | Cao | Rất cao (làm mất giá trị cốt lõi) | Spike M1 trên máy thật; hướng dẫn cài đặt theo hãng; ghi Room để không mất điểm đã ghi; phát hiện + thông báo gián đoạn; đã xin đủ quyền nền (D-04) nhưng **không loại bỏ được OEM kill**; gate M1 đo xem có đủ không, nếu không thì đổi kỳ vọng sản phẩm (ADR-013, `12` §5.3) | M1 |
+| R-02 | Google Play từ chối/đòi bổ sung do dùng vị trí/FGS; chính sách chưa đọc được nguồn gốc (U1) | Trung bình | Cao | **Đã quyết định xin quyền nền (D-04) ⇒ rủi ro tăng:** chuẩn bị form vị trí nền + video + disclosure; biện minh core functionality (ghi hành trình khi tắt màn hình); đọc lại chính sách gốc sớm (từ M1, không để đến M6-T08); sideload APK cho beta nếu bị từ chối; phương án lùi: bỏ quyền nền và quay lại ADR-013 bản cũ | M1–M6 |
 | R-03 | Tile bản đồ: ToS/chi phí/chủ quyền Việt Nam (U2–U5); MapLibre Native có hỗ trợ nguồn tự host hay không | Trung bình | Cao (pháp lý + hiển thị sai chủ quyền) | Spike M1-T06 với tiêu chí nghiệm thu; style do mình kiểm soát; cấu hình URL từ server | M1 |
 | R-04 | Tuân thủ dữ liệu cá nhân (Luật 91/2025, NĐ 356/2025/NĐ 13/2023 chưa rõ — S7, U7) | Trung bình | Cao | Thiết kế thận trọng (consent riêng, xóa, xuất, lưu tối thiểu); luật sư xác nhận D-08 trước beta rộng | M6 |
 | R-05 | **Mất dữ liệu / sai lệch** do single node: RF=1 Kafka, 1 PG không replica, backup 24 giờ | Thấp–TB | Cao | Mô tả rõ cửa sổ (§3); metric lag; backup mã hóa; diễn tập restore; nâng cấp (PITR/replica) khi có người dùng thật | M7 |
@@ -52,6 +52,7 @@ Nhãn: `[GIẢ ĐỊNH]` (tôi đã chọn mặc định hợp lý và tiếp t�
 | R-18 | Lệch đồng hồ thiết bị, CGNAT làm rate limit IP sai | Thấp | Thấp | Offset ở `hello`; giới hạn IP rộng, ưu tiên giới hạn theo user | M3 |
 | R-19 | Pub/Sub mất message âm thầm (không ai biết) | Trung bình | Thấp (vị trí tự lành; event có đường bù) | `resync.required{pubsub_gap}` sau phục hồi; phát hiện lỗ `event_seq` | M4 |
 | R-20 | Giả định ACK `location.ack`: client dựa vào ACK để xóa dữ liệu — lỗi logic ACK sẽ gây mất điểm | Thấp | Cao | Test A7/A8, thuộc tính "up_to_seq liên tục", client xóa `≤ up_to_seq` theo session | M5 |
+| R-21 | **Hạ tầng miễn phí (D-09) không đủ cho kiến trúc đã thiết kế**: cần process chạy liên tục + WebSocket dài hạn + Postgres + Redis + Kafka (JVM ~700 MiB) + 2 instance để test scale-out; free-tier thường giới hạn RAM/CPU, ngủ khi rảnh, chặn cổng/ kết nối dài, giới hạn băng thông/đĩa | Cao | Cao (có thể không chạy được Kafka/2 instance, hoặc WS bị ngắt) | Chưa chọn nhà cung cấp: tra điều kiện thật trước M4 (`research/`); phương án: (a) một máy miễn phí/tự có đủ RAM chạy Compose như `13`; (b) tách dịch vụ managed free cho PG/Redis và chạy Go ở nơi cho process liên tục; (c) `HISTORY_SINK=direct_pg` bỏ Kafka (mâu thuẫn D-05, cần chủ dự án quyết lại); (d) trong lúc phát triển (M0–M3) chạy hoàn toàn local, không phụ thuộc host | Trước M4 |
 
 ## 3. Cửa sổ mất dữ liệu và giới hạn trung thực (không tuyên bố "không mất dữ liệu")
 
@@ -79,4 +80,4 @@ Nhãn: `[GIẢ ĐỊNH]` (tôi đã chọn mặc định hợp lý và tiếp t�
 4. Trip `paused` ở ví dụ vòng đời: cắt, thay bằng pause ở cấp session/sharing (ADR-012).
 5. Đồng bộ "chưa có `session_id`" khi offline: yêu cầu có mạng để bắt đầu (ADR-020).
 6. Nguy cơ chủ quyền bản đồ và tile OSM: không dùng tile công cộng (ADR-014).
-7. FGS `location` không thể khởi chạy từ nền khi thiếu quyền nền (S2) ⇒ khả năng tự phục hồi tracking sau khi bị kill bị hạn chế — điều prompt chưa nêu rõ.
+7. FGS `location` không thể khởi chạy từ nền khi thiếu quyền nền (S2) — điều prompt chưa nêu rõ. Chủ dự án đã chọn xin quyền nền (D-04) để có khả năng tự phục hồi tracking; đánh đổi là review Google Play (R-02).

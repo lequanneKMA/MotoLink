@@ -16,6 +16,8 @@ Nhánh làm việc: `docs/motolink-architecture`. Prompt gốc: `docs/prompt/Mot
 - Phase B/C: viết theo thứ tự prompt 0.2; mỗi file một commit.
 - Phase D: grep ADR→file, bảng↔endpoint, WS type↔sequence, TTL Redis, topic Kafka, TODO/TBD, "exactly-once". Phát hiện & sửa: kết nối WS theo user (không theo device); tính `clock_offset` ở server; offline-start cần mạng; thiếu `auth.refresh` trong sequence S2; routing outbox `sos_*`; endpoint không có bảng (`/telemetry/client`, `/config`) cần ghi chú; cụm "TODO trần" trong 15 bị grep nhầm. Mermaid: `mmdc` render 11/11 khối OK.
 
+- 2026-10-10 Chủ dự án xác nhận: **D-02** đăng nhập cơ bản trước, Google + Facebook sau; **D-04** xin đủ quyền chạy nền (`ACCESS_BACKGROUND_LOCATION`); **D-05** giữ Kafka; **D-18** chấp nhận cửa sổ mất dữ liệu, cải thiện sau; **D-09** dùng backend miễn phí (chưa chọn nhà cung cấp → rủi ro mới R-21, tension với D-05). Đã cập nhật ADR-003/007/013/017, `05` (bỏ `google_sub`, dự phòng `auth_identities`), `11`, `12`, `13`, `15`, `16`, `17`, `00`.
+
 ## Quyết định chốt sớm
 
 Xem `02-adr.md` (bảng tổng hợp) và `00-README.md` §3. Quyết định cần chủ dự án: `16` §1 (D-01…D-19).

@@ -9,7 +9,7 @@
 - *Vị trí:* hai nhánh độc lập — **live** (Redis + Hub, chấp nhận mất bản cũ) và **bền** (Kafka → PostgreSQL, ACK về client, at-least-once, ghi idempotent) (ADR-005).
 - *Thứ tự:* `(session_id do server cấp, seq do client gán)`, không tin đồng hồ thiết bị (ADR-004).
 - *Realtime:* Hub shard single-owner, outbox coalescing theo client, drop-oldest cho vị trí, đóng kết nối khi consumer quá chậm (ADR-009).
-- *Android:* Foreground Service `location` do người dùng chủ động bật, Room là nguồn UI, hàng đợi offline, MapLibre; không xin quyền vị trí nền ở MVP (ADR-013, 018, 019).
+- *Android:* Foreground Service `location` do người dùng chủ động bật, Room là nguồn UI, hàng đợi offline, MapLibre; xin quyền vị trí nền để tracking chạy khi tắt màn hình (D-04; ADR-013, 018, 019).
 - *Riêng tư:* chỉ thành viên trip thấy vị trí; kiểm quyền ở từng REST endpoint và từng WS message; consent riêng cho vị trí; không log tọa độ (ADR-016).
 
 **Trung thực về đánh đổi:** ở quy mô MVP, Kafka không bắt buộc về mặt kỹ thuật; nó được giữ chủ yếu vì mục tiêu học và có lối thoát `HISTORY_SINK=direct_pg` (ADR-007). Rủi ro kỹ thuật lớn nhất là **ghi vị trí nền bị OEM kill** — phải kiểm bằng máy thật ở M1 trước khi đầu tư backend (`15`, `16`).
@@ -21,7 +21,7 @@
 ### Trong phạm vi
 | # | Năng lực | Ghi chú |
 |---|---|---|
-| 1 | Đăng ký/đăng nhập email + mật khẩu, hồ sơ, đăng xuất | ADR-003; không có quên mật khẩu ở MVP (rủi ro trong `16`) |
+| 1 | Đăng ký/đăng nhập cơ bản (email + mật khẩu), hồ sơ, đăng xuất | ADR-003; Google/Facebook làm sau; không có quên mật khẩu ở MVP (rủi ro trong `16`) |
 | 2 | Tạo trip, tên, quyền riêng tư (`history_visibility`) | Vòng đời `draft→active→ended→archived` |
 | 3 | Mời bằng mã (hạn, giới hạn lượt, thu hồi) | Chỉ owner tạo mã |
 | 4 | Bản đồ nhóm realtime | MapLibre, nguồn tile theo ADR-014 |
@@ -35,7 +35,7 @@
 | 12 | Consent vị trí, xóa tài khoản/ dữ liệu, xuất dữ liệu `[CẦN XÁC NHẬN]` | `11` |
 
 ### Ngoài phạm vi (ADR-020)
-Pause cấp trip; quên mật khẩu; Google Sign-In (M6+); bản đồ offline; chat/voice; geofence; chia sẻ công khai; đa thiết bị đồng thời; ghi hoàn toàn offline trước khi có `session_id`; reinstate thành viên bị xóa; iOS/web; turn-by-turn, tối ưu tuyến, giao thông, mạng xã hội, thanh toán, AI, đa tenant, microservices; PostGIS; tracing OTel.
+Pause cấp trip; quên mật khẩu; đăng nhập Google/Facebook (làm sau MVP); bản đồ offline; chat/voice; geofence; chia sẻ công khai; đa thiết bị đồng thời; ghi hoàn toàn offline trước khi có `session_id`; reinstate thành viên bị xóa; iOS/web; turn-by-turn, tối ưu tuyến, giao thông, mạng xã hội, thanh toán, AI, đa tenant, microservices; PostGIS; tracing OTel.
 
 ### Đối tượng và môi trường
 Người dùng Việt Nam, Android thực tế đa dạng hãng; có máy không có GMS (chấp nhận hạn chế: không FCM). Một VPS Ubuntu 2 vCPU/4 GB. Phát hành Google Play (và sideload APK để thử).

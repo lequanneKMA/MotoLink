@@ -2,6 +2,8 @@
 
 Tham chiếu: ADR-001, ADR-007, ADR-010, ADR-017. Phiên bản image `[CẦN XÁC NHẬN]` (U10) — dưới đây dùng placeholder `<tag>`; **pin digest** khi code. Mọi con số capacity là **tính toán từ giả định** (`[GIẢ ĐỊNH]`), kèm kế hoạch đo ở `14`.
 
+> **Cập nhật 2026-10-10 (D-09):** chủ dự án chọn dùng backend miễn phí thay vì thuê VPS. Tài liệu này vẫn mô tả mục tiêu cho **một host Linux 2 vCPU/4 GB**; chưa có nhà cung cấp free-tier nào được chọn hoặc tra cứu `[CHƯA XÁC MINH]`, và khả năng chạy Kafka + 2 instance trên đó là rủi ro R-21 (`16`). Ngân sách RAM §4.3 là điều kiện tối thiểu để kiến trúc hiện tại chạy được; nếu host nhỏ hơn thì dùng `HISTORY_SINK=direct_pg` hoặc đổi kiến trúc triển khai.
+
 ## 1. Topology
 
 ```mermaid
