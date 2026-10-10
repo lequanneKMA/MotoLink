@@ -47,6 +47,7 @@ type API struct {
 	Client           ClientConfig
 	Registerer       prometheus.Registerer // optional
 	Telemetry        TelemetrySink         // optional: client quality samples
+	Points           PointWriter           // durable point writer for POST .../points (nil → 503)
 
 	m metricSet
 }

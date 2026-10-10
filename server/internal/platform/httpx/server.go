@@ -14,6 +14,7 @@ import (
 type Check struct {
 	Name string
 	Fn   func(context.Context) error
+	Warn bool // a failure is reported but does not fail readiness (e.g. Kafka, docs/design/06 §2.9)
 }
 
 // HealthMux returns /healthz (liveness) and /readyz (all checks must pass).
@@ -31,7 +32,9 @@ func HealthMux(checks ...Check) *http.ServeMux {
 		for _, c := range checks {
 			if err := c.Fn(ctx); err != nil {
 				res[c.Name] = err.Error()
-				code = http.StatusServiceUnavailable
+				if !c.Warn {
+					code = http.StatusServiceUnavailable
+				}
 			} else {
 				res[c.Name] = "ok"
 			}

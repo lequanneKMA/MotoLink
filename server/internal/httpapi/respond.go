@@ -52,8 +52,11 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 // decode reads a JSON body (unknown fields are tolerated for forward compatibility).
-func decode(r *http.Request, v any) error {
-	r.Body = http.MaxBytesReader(nil, r.Body, maxBody)
+func decode(r *http.Request, v any) error { return decodeLarge(r, v, maxBody) }
+
+// decodeLarge is decode with a custom body cap (bulk endpoints).
+func decodeLarge(r *http.Request, v any, limit int64) error {
+	r.Body = http.MaxBytesReader(nil, r.Body, limit)
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(v); err != nil {
 		var mbe *http.MaxBytesError

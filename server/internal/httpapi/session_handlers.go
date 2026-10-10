@@ -16,6 +16,7 @@ func (a *API) sessionRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/tracking-sessions/{sid}/resume", a.idem(a.sessionOp((*tracking.Service).Resume)))
 	mux.Handle("POST /v1/tracking-sessions/{sid}/end", a.idem(a.sessionOp((*tracking.Service).End)))
 	mux.Handle("GET /v1/tracking-sessions/{sid}/route", a.authed(a.sessionRoute))
+	mux.Handle("POST /v1/tracking-sessions/{sid}/points", a.authed(a.postPoints))
 }
 
 func (a *API) startSession(w http.ResponseWriter, r *http.Request, p Principal) error {

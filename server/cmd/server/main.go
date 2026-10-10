@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/twmb/franz-go/pkg/kgo"
 	"golang.org/x/sync/errgroup"
 
+	"motolink/internal/durable"
 	"motolink/internal/httpapi"
 	"motolink/internal/identity"
 	"motolink/internal/platform/config"
@@ -82,6 +84,32 @@ func run(args []string) error {
 
 	reg := metrics.New()
 	g, gctx := errgroup.WithContext(ctx)
+	var fanout durable.Fanout = realtime.BusFanout{Bus: bus}
+
+	var (
+		sink    realtime.Sink
+		writer  httpapi.PointWriter
+		kclient *kgo.Client
+	)
+	needKafka := cfg.HistorySink == "kafka" || cfg.OutboxSink == "kafka"
+	if needKafka && (cfg.Roles.API || cfg.Roles.WS || cfg.Roles.Worker) && len(cfg.KafkaBrokers) > 0 {
+		kclient, err = durable.NewProducerClient(durable.KafkaConfig{Brokers: cfg.KafkaBrokers, Log: log})
+		if err != nil {
+			return fmt.Errorf("kafka: %w", err)
+		}
+		defer kclient.Close()
+		checks = append(checks, httpx.Check{Name: "kafka", Warn: true, Fn: kclient.Ping})
+	}
+	switch {
+	case cfg.HistorySink == "direct_pg":
+		pgs := durable.NewPGSink(pool, durable.PGSinkOptions{Log: log, Reg: reg.Reg})
+		pgs.Start(gctx)
+		defer pgs.Wait() // flushes what is queued once gctx ends
+		sink, writer = pgs, pgs
+	case kclient != nil:
+		ks := durable.NewKafkaSink(kclient, log, reg.Reg)
+		sink, writer = ks, ks
+	}
 
 	root := http.NewServeMux()
 	root.Handle("/", httpx.HealthMux(checks...))
@@ -100,18 +128,19 @@ func run(args []string) error {
 		trips := trip.NewService(pool, nil)
 		sessions := tracking.NewService(pool, trips, svc, nil)
 		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, DB: pool, Limiter: limiter, Log: log,
-			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg}
+			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg, Points: writer}
 		root.Handle("/v1/", a.Handler())
 
 		if cfg.Roles.WS {
 			hub := realtime.NewHub(realtime.Options{Log: log, TrustedProxyHops: cfg.TrustedProxyHops}, realtime.Deps{
 				Live: live, Bus: bus, Trips: trips, Sessions: sessions,
-				Auth: realtime.IdentityAuth{Svc: svc}, Metrics: realtime.NewMetrics(reg.Reg),
+				Auth: realtime.IdentityAuth{Svc: svc}, Metrics: realtime.NewMetrics(reg.Reg), Sink: sink,
 			})
 			trips.SetPublisher(hub)
 			trips.SetLive(hub)
 			sessions.SetPublisher(hub)
 			hub.Start(gctx)
+			fanout = hub
 			root.Handle("GET /v1/ws", hub)
 			defer func() {
 				sctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
@@ -119,6 +148,22 @@ func run(args []string) error {
 				hub.Shutdown(sctx)
 			}()
 		}
+	}
+
+	if cfg.Roles.Worker {
+		disp := &durable.Dispatcher{Fanout: fanout, Log: log}
+		var pub durable.Publisher = disp.Publisher()
+		if cfg.OutboxSink == "kafka" && kclient != nil {
+			pub = durable.KafkaPublisher(kclient)
+			kc := durable.KafkaConfig{Brokers: cfg.KafkaBrokers, Log: log, Reg: reg.Reg}
+			g.Go(func() error { return (&durable.Notifier{D: disp, Cfg: kc}).Run(gctx) })
+		}
+		if cfg.HistorySink == "kafka" && len(cfg.KafkaBrokers) > 0 {
+			hw := &durable.HistoryWriter{DB: pool, Cfg: durable.KafkaConfig{Brokers: cfg.KafkaBrokers, Log: log, Reg: reg.Reg}}
+			g.Go(func() error { return hw.Run(gctx) })
+		}
+		relay := durable.NewRelay(pool, pub, durable.RelayOptions{Log: log, Reg: reg.Reg})
+		g.Go(func() error { relay.Run(gctx); return nil })
 	}
 
 	api := &http.Server{Addr: cfg.HTTPAddr, Handler: root, ReadHeaderTimeout: 5 * time.Second}

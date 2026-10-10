@@ -430,3 +430,12 @@ func (c *Client) onSOSReceipt(env Envelope) {
 	}
 	c.push(ackFrame(env.ID, nil))
 }
+
+// ValidCoord reports whether lat/lng are a usable fix (shared with the REST points endpoint).
+func ValidCoord(lat, lng float64) bool { return validCoord(lat, lng) }
+
+// Plausibility limits shared with the REST points endpoint.
+const (
+	MaxAccuracyM = maxAccuracyM
+	MaxSpeedMps  = maxSpeedMps
+)
