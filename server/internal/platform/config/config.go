@@ -35,6 +35,8 @@ type Config struct {
 	RefreshTTL        time.Duration
 	Argon2Concurrency int
 
+	TrustedProxyHops int // number of reverse proxies whose X-Forwarded-For entry is trusted (0 = none)
+
 	WSMaxConns      int
 	WSMaxConnsPerIP int
 
@@ -61,6 +63,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		AccessTTL:         g.dur("ACCESS_TOKEN_TTL", 15*time.Minute),
 		RefreshTTL:        g.dur("REFRESH_TOKEN_TTL", 60*24*time.Hour),
 		Argon2Concurrency: g.integer("ARGON2_MAX_CONCURRENCY", 2),
+		TrustedProxyHops:  g.integer("TRUSTED_PROXY_HOPS", 0),
 		WSMaxConns:        g.integer("WS_MAX_CONNS", 1500),
 		WSMaxConnsPerIP:   g.integer("WS_MAX_CONNS_PER_IP", 20),
 		LogLevel:          g.str("LOG_LEVEL", "info"),
@@ -108,6 +111,9 @@ func (c Config) Validate() error {
 	}
 	if c.Env == "prod" && c.DebugLogCoords {
 		errs = append(errs, errors.New("DEBUG_LOG_COORDS must not be enabled when APP_ENV=prod (docs/design/11 §4.5)"))
+	}
+	if c.TrustedProxyHops < 0 || c.TrustedProxyHops > 5 {
+		errs = append(errs, errors.New("TRUSTED_PROXY_HOPS must be 0..5"))
 	}
 	if c.Argon2Concurrency < 1 {
 		errs = append(errs, errors.New("ARGON2_MAX_CONCURRENCY must be >= 1"))
