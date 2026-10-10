@@ -118,9 +118,12 @@ Rate limit mã mời: 10 lần sai/giờ/user + 30/giờ/IP. Mã 8 ký tự Croc
 | `GET /sync/bootstrap` | self | — | `{trips:[{trip,my_membership,head_event_seq,my_open_session?}],server_time}` — gọi khi đăng nhập/ mở app sau thời gian dài; app dùng để dựng Room | | | trips, trip_members, tracking_sessions |
 
 ### 2.9 Hệ thống
+Các endpoint dưới đây **không lưu bảng PostgreSQL** (có lý do ghi bên cạnh); chúng không vi phạm quy tắc "endpoint trỏ về bảng có thật".
+
 | Path | Ghi chú |
 |---|---|
-| `GET /config` (public) | Xem §1.2 |
+| `GET /config` (public) | Xem §1.2. Đọc từ cấu hình server, không bảng |
+| `POST /telemetry/client` | Quyền `any`. Body: histogram bucket ẩn danh `{location_age_buckets,ack_latency_buckets,app_version}` — **không** có tọa độ/ID chuyến. Chỉ cộng vào metric Prometheus (`product_location_age_seconds`); không lưu DB. Giới hạn 1 request/phút/thiết bị |
 | `GET /ws` | Nâng cấp WebSocket, xem `07` |
 | `GET /healthz` (liveness), `GET /readyz` (kiểm PG, Redis; Kafka chỉ cảnh báo) | Cổng nội bộ, không qua Caddy công khai |
 | `GET /metrics` | Cổng nội bộ riêng, chỉ Prometheus |
