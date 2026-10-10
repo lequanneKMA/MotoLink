@@ -1,0 +1,7 @@
+deploy/.env
+*.pem
+*.test
+/server/server
+.idea/
+.vscode/
+node_modules/
