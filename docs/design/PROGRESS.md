@@ -38,7 +38,7 @@ Môi trường soạn code: không có Docker daemon; kiểm bằng PostgreSQL 1
 | M0-T03 platform | xong | config, logx (redaction), metrics, UUIDv7 |
 | M0-T04 migration | xong | `00001_baseline.sql` khớp `05`; test với PG thật |
 | M0-T05 golden contract | **chưa** | |
-| M0-T06 Android skeleton | **chưa** | cần Android SDK/máy thật |
+| M0-T06 Android skeleton | xong (**chưa build được `:app` trong sandbox**) | xem mục Android bên dưới |
 | M2-T01 identity | xong | register/login/refresh xoay vòng + phát hiện dùng lại/logout/logout-all, max 10 phiên, argon2id có semaphore |
 | M2-T02 middleware | xong | request id, recover, access log (không body), auth + thu hồi, rate limit, lỗi problem+json, metrics |
 | M2-T03 idempotency | xong | replay, 422 khác body, 409 đồng thời, không cache 5xx, theo user |
@@ -49,3 +49,17 @@ Sai lệch có chủ đích so với tài liệu:
 - Test tích hợp dùng `TEST_DATABASE_URL`/`TEST_REDIS_ADDR` (tự bỏ qua nếu không đặt) thay vì testcontainers; CI cung cấp Postgres service. Redis test trong CI chưa bật.
 - `POST /auth/register` không dùng `Idempotency-Key` (xem `06`).
 - Bug tìm được khi test: (1) `NoopRevoker` làm phiên đã logout vẫn hợp lệ — sửa để fallback PostgreSQL; (2) khóa log `route` bị redaction nhầm là tọa độ — đổi thành `endpoint` + test hồi quy.
+
+## Tiến độ Android (nhánh `feat/m0-foundation`, thư mục `android/`)
+
+| Phần | Trạng thái kiểm chứng |
+|---|---|
+| `:logic` (JVM thuần): lấy mẫu thích ứng, lọc chất lượng, Haversine/RDP, codec WebSocket v1, `PositionKey`/reconciler, `EventCursor`, `PendingTracker` (ACK), backoff, phân loại hiện diện, máy trạng thái tracking, hướng dẫn OEM, định dạng | **41 test JVM chạy xanh** (Gradle + Kotlin 2.3.21). Golden frame lấy từ `07`. Test bắt được 1 lỗi hợp đồng thật: `v`/`supported_v` bị bỏ khi bằng giá trị mặc định (đã sửa) |
+| `:app` lớp mạng (Retrofit 3 / OkHttp 5.5 / kotlinx-serialization, authenticator refresh một luồng, Keystore) | **Biên dịch được** (kiểm riêng với `android-all` API 36 + stub `TokenStore`); bắt được 1 lỗi biên dịch thật (tham số constructor không phải property) — đã sửa. Chưa chạy |
+| `:app` phần còn lại: Room, TrackingService (FGS location), LocationSource (Fused + LocationManager), luồng quyền, Compose UI, MapLibre, DataStore | **Chưa biên dịch**: cần Android SDK (`dl.google.com`) và thư viện androidx/play-services (Google Maven) — đều bị chặn trong sandbox. Viết cẩn thận nhưng chắc chắn sẽ có lỗi khi sync/build lần đầu |
+| Phiên bản thư viện | Kotlin 2.3.21, KSP 2.3.12, coroutines 1.10.2, retrofit 3.0.0, okhttp 5.5.0, serialization 1.11.0, MapLibre 13.6.1: **xác minh tồn tại** trên Maven Central. AGP 8.13.0, Compose BOM, Room, WorkManager, DataStore, lifecycle, activity/navigation, play-services-location: **không xác minh được** — nâng lên bản ổn định mới nhất khi sync |
+| Tên package MapLibre (`org.maplibre.android.*`, `org.maplibre.geojson.*`) | `[CHƯA XÁC MINH]` |
+
+Phạm vi M1 đã có trong code: ghi hành trình solo, dịch vụ nền, lấy mẫu thích ứng, phát hiện gián đoạn, lịch sử, bản đồ vẽ tuyến (nền trống — chưa chọn nguồn tile, D-15), luồng quyền (disclosure → vị trí → thông báo → nền), hướng dẫn OEM, đăng nhập/đăng ký (cần backend). Chưa có: chuyến đi, WebSocket client, SOS, FCM, đồng bộ lên server.
+
+Chạy lần đầu trên máy bạn: mở thư mục `android/` bằng Android Studio (cần JDK 17+ và Android SDK 36), để Gradle sync; sửa phiên bản nếu thiếu; emulator dùng `http://10.0.2.2:8080/` (đã mặc định cho debug), máy thật đặt `api.baseUrl=http://<IP-LAN>:8080/` trong `android/local.properties`. Test logic không cần SDK: `cd android && ./gradlew :logic:test` (khi chỉ có JDK, tạm bỏ `include(":app")` trong `settings.gradle.kts`).
