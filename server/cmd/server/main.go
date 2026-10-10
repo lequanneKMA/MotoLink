@@ -23,6 +23,7 @@ import (
 	"motolink/internal/platform/metrics"
 	"motolink/internal/platform/pg"
 	"motolink/internal/platform/ratelimit"
+	"motolink/internal/realtime"
 	"motolink/internal/tracking"
 	"motolink/internal/trip"
 )
@@ -64,8 +65,10 @@ func run(args []string) error {
 
 	checks := []httpx.Check{{Name: "postgres", Fn: pool.Ping}}
 	var (
-		limiter ratelimit.Limiter = ratelimit.NewMemory()
-		revoker identity.Revoker  = identity.NoopRevoker{}
+		limiter ratelimit.Limiter  = ratelimit.NewMemory()
+		revoker identity.Revoker   = identity.NoopRevoker{}
+		live    realtime.LiveStore = realtime.NewMemStore()
+		bus     realtime.Bus       = realtime.NoBus{}
 	)
 	if cfg.RedisAddr != "" {
 		rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr, Password: cfg.RedisPass})
@@ -73,6 +76,8 @@ func run(args []string) error {
 		checks = append(checks, httpx.Check{Name: "redis", Fn: func(c context.Context) error { return rdb.Ping(c).Err() }})
 		limiter = ratelimit.Redis{C: rdb}
 		revoker = identity.NewRedisRevoker(rdb)
+		live = realtime.NewRedisStore(rdb)
+		bus = realtime.NewRedisBus(rdb)
 	}
 
 	reg := metrics.New()
@@ -97,6 +102,23 @@ func run(args []string) error {
 		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, DB: pool, Limiter: limiter, Log: log,
 			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg}
 		root.Handle("/v1/", a.Handler())
+
+		if cfg.Roles.WS {
+			hub := realtime.NewHub(realtime.Options{Log: log, TrustedProxyHops: cfg.TrustedProxyHops}, realtime.Deps{
+				Live: live, Bus: bus, Trips: trips, Sessions: sessions,
+				Auth: realtime.IdentityAuth{Svc: svc}, Metrics: realtime.NewMetrics(reg.Reg),
+			})
+			trips.SetPublisher(hub)
+			trips.SetLive(hub)
+			sessions.SetPublisher(hub)
+			hub.Start(gctx)
+			root.Handle("GET /v1/ws", hub)
+			defer func() {
+				sctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+				defer cancel()
+				hub.Shutdown(sctx)
+			}()
+		}
 	}
 
 	api := &http.Server{Addr: cfg.HTTPAddr, Handler: root, ReadHeaderTimeout: 5 * time.Second}
