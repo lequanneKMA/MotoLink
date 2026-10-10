@@ -9,6 +9,7 @@ import (
 
 	"motolink/internal/identity"
 	"motolink/internal/platform/ratelimit"
+	"motolink/internal/sos"
 	"motolink/internal/tracking"
 	"motolink/internal/trip"
 )
@@ -47,7 +48,9 @@ type API struct {
 	Client           ClientConfig
 	Registerer       prometheus.Registerer // optional
 	Telemetry        TelemetrySink         // optional: client quality samples
-	Points           PointWriter           // durable point writer for POST .../points (nil → 503)
+	SOS              *sos.Service
+	Notifications    NotificationStore
+	Points           PointWriter // durable point writer for POST .../points (nil → 503)
 
 	m metricSet
 }
@@ -82,6 +85,12 @@ func (a *API) Handler() http.Handler {
 	}
 	if a.Sessions != nil {
 		a.sessionRoutes(mux)
+	}
+	if a.SOS != nil {
+		a.sosRoutes(mux)
+	}
+	if a.Notifications != nil {
+		a.notificationRoutes(mux)
 	}
 	return a.base(mux)
 }

@@ -43,6 +43,12 @@ type Config struct {
 	LogLevel       string
 	DebugLogCoords bool
 
+	FCMCredentialsFile string // service-account JSON; empty = push disabled (in-app notifications only)
+	FCMProjectID       string
+
+	RetentionFullresDays   int // raw GPS points are kept this many days after a session ended (docs/design/05 §6)
+	RetentionPartitionDays int // whole monthly partitions older than this are dropped
+
 	ShutdownTimeout time.Duration
 }
 
@@ -50,25 +56,29 @@ type Config struct {
 func Load(lookup func(string) (string, bool)) (Config, error) {
 	g := getter{lookup: lookup}
 	c := Config{
-		Env:               g.str("APP_ENV", "dev"),
-		HTTPAddr:          g.str("HTTP_ADDR", ":8080"),
-		MetricsAddr:       g.str("METRICS_ADDR", ":9100"),
-		DatabaseURL:       g.str("DATABASE_URL", ""),
-		RedisAddr:         g.str("REDIS_ADDR", ""),
-		RedisPass:         g.str("REDIS_PASSWORD", ""),
-		HistorySink:       g.str("HISTORY_SINK", "kafka"),
-		OutboxSink:        g.str("OUTBOX_SINK", "kafka"),
-		JWTPrivateKeyFile: g.str("JWT_ED25519_PRIVATE_KEY_FILE", ""),
-		JWTKeyID:          g.str("JWT_KID", "k1"),
-		AccessTTL:         g.dur("ACCESS_TOKEN_TTL", 15*time.Minute),
-		RefreshTTL:        g.dur("REFRESH_TOKEN_TTL", 60*24*time.Hour),
-		Argon2Concurrency: g.integer("ARGON2_MAX_CONCURRENCY", 2),
-		TrustedProxyHops:  g.integer("TRUSTED_PROXY_HOPS", 0),
-		WSMaxConns:        g.integer("WS_MAX_CONNS", 1500),
-		WSMaxConnsPerIP:   g.integer("WS_MAX_CONNS_PER_IP", 20),
-		LogLevel:          g.str("LOG_LEVEL", "info"),
-		DebugLogCoords:    g.boolean("DEBUG_LOG_COORDS", false),
-		ShutdownTimeout:   g.dur("SHUTDOWN_TIMEOUT", 25*time.Second),
+		Env:                    g.str("APP_ENV", "dev"),
+		HTTPAddr:               g.str("HTTP_ADDR", ":8080"),
+		MetricsAddr:            g.str("METRICS_ADDR", ":9100"),
+		DatabaseURL:            g.str("DATABASE_URL", ""),
+		RedisAddr:              g.str("REDIS_ADDR", ""),
+		RedisPass:              g.str("REDIS_PASSWORD", ""),
+		HistorySink:            g.str("HISTORY_SINK", "kafka"),
+		OutboxSink:             g.str("OUTBOX_SINK", "kafka"),
+		JWTPrivateKeyFile:      g.str("JWT_ED25519_PRIVATE_KEY_FILE", ""),
+		JWTKeyID:               g.str("JWT_KID", "k1"),
+		AccessTTL:              g.dur("ACCESS_TOKEN_TTL", 15*time.Minute),
+		RefreshTTL:             g.dur("REFRESH_TOKEN_TTL", 60*24*time.Hour),
+		Argon2Concurrency:      g.integer("ARGON2_MAX_CONCURRENCY", 2),
+		TrustedProxyHops:       g.integer("TRUSTED_PROXY_HOPS", 0),
+		WSMaxConns:             g.integer("WS_MAX_CONNS", 1500),
+		WSMaxConnsPerIP:        g.integer("WS_MAX_CONNS_PER_IP", 20),
+		LogLevel:               g.str("LOG_LEVEL", "info"),
+		DebugLogCoords:         g.boolean("DEBUG_LOG_COORDS", false),
+		ShutdownTimeout:        g.dur("SHUTDOWN_TIMEOUT", 25*time.Second),
+		FCMCredentialsFile:     g.str("FCM_CREDENTIALS_FILE", ""),
+		FCMProjectID:           g.str("FCM_PROJECT_ID", ""),
+		RetentionFullresDays:   g.integer("RETENTION_FULLRES_DAYS", 30),
+		RetentionPartitionDays: g.integer("RETENTION_PARTITION_DAYS", 90),
 	}
 	if b := g.str("KAFKA_BROKERS", ""); b != "" {
 		for _, s := range strings.Split(b, ",") {

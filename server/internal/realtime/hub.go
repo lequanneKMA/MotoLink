@@ -364,6 +364,12 @@ func (h *Hub) busLoop(ctx context.Context) {
 					c.invalidateSessions()
 				}
 			}
+		case kUserFrame:
+			if u, err := uuid.Parse(m.U); err == nil {
+				if c := h.clientOf(u); c != nil {
+					c.push([]byte(m.F))
+				}
+			}
 		case kRevoke:
 			if u, err := uuid.Parse(m.U); err == nil {
 				if c := h.clientOf(u); c != nil && c.sid.String() == m.S {
@@ -465,3 +471,6 @@ func errFrameTrip(tripID uuid.UUID, code, msg string) []byte {
 }
 
 func mustJSON(v any) json.RawMessage { b, _ := json.Marshal(v); return b }
+
+// SetSOS installs the SOS handler (set before Start; the sos service needs the hub for fan-out, so it is wired late).
+func (h *Hub) SetSOS(s SOSHandler) { h.deps.SOS = s }

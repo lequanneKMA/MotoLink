@@ -59,7 +59,7 @@ Chính sách mật khẩu: ≥ 8 ký tự, không nằm trong danh sách phổ b
 ### 2.3 Trip
 | Method & path | Quyền | Request | Response | Lỗi | IK | Bảng |
 |---|---|---|---|---|---|---|
-| `POST /trips` | any | `{name,history_visibility?}` | `201 {trip}` (status `draft`, caller là owner) | `422`, `403 consent_required` | ✔ | trips, trip_members, trip_events |
+| `POST /trips` | any | `{name,history_visibility?}` | `201 {trip}` (status `draft`, caller là owner) | `422` | ✔ | trips, trip_members, trip_events |
 | `GET /trips?status=&cursor=` | any | — | trips mà caller là member active (mặc định ẩn `archived`) | | | trips, trip_members |
 | `GET /trips/{id}` | member | — | `{trip,my_membership,member_count}` | `404` | | trips, trip_members |
 | `PATCH /trips/{id}` | owner | `{name?,history_visibility?}` | `200 {trip}` | `409 invalid_state` nếu `archived` | — | trips |
@@ -76,7 +76,7 @@ Chính sách mật khẩu: ≥ 8 ký tự, không nằm trong danh sách phổ b
 | `GET /trips/{id}/invitations` | owner | — | danh sách (không có code), `used_count`, `revoked_at` | | | trip_invitations |
 | `DELETE /trips/{id}/invitations/{inv_id}` | owner | — | `204` (set `revoked_at`) | | | trip_invitations |
 | `POST /invitations/resolve` | any | `{code}` | `{trip_name,member_count,owner_name,valid:true}` (không lộ danh sách; chỉ khi hợp lệ) | `404` chung cho sai/hết hạn/thu hồi (tránh dò), `429` | — | trip_invitations, trips |
-| `POST /trip-join` | any | `{code}` | `200 {trip,my_membership}` (T4 ở `05`) | `404 invalid_code`, `410 expired`, `409 trip_full|already_member|removed|invalid_state`, `403 consent_required` | ✔ | trip_invitations, trip_members, trips, trip_events, outbox |
+| `POST /trip-join` | any | `{code}` | `200 {trip,my_membership}` (T4 ở `05`) | `404 invalid_code`, `410 expired`, `409 trip_full|already_member|removed|invalid_state` | ✔ | trip_invitations, trip_members, trips, trip_events, outbox |
 Rate limit mã mời: 10 lần sai/giờ/user + 30/giờ/IP. Mã 8 ký tự Crockford base32 (~40 bit) + hạn ngắn + giới hạn thử ⇒ xác suất đoán trúng một mã hợp lệ chấp nhận được `[GIẢ ĐỊNH — đánh giá lại ở M2]`.
 
 ### 2.5 Thành viên

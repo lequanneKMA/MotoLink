@@ -175,7 +175,7 @@ Mỗi `user_id` xuất hiện tối đa một lần/batch (coalesce). Client áp
   "data":{"user_id":"U3","display_name":"Hà"}
 }}
 ```
-`kind` hợp lệ (v1): `trip_started`, `trip_ended`, `trip_archived`, `member_joined`, `member_left`, `member_removed`, `member_sharing_changed`, `ownership_transferred`, `tracking_started`, `tracking_paused`, `tracking_resumed`, `tracking_ended`, `sos_resolved`. Client gặp `kind` lạ phải bỏ qua nhưng **vẫn** tiến cursor.
+`kind` hợp lệ (v1): `trip_created`, `trip_started`, `trip_ended`, `trip_archived`, `member_joined`, `member_left`, `member_removed`, `member_sharing_changed`, `ownership_transferred`, `tracking_started`, `tracking_paused`, `tracking_resumed`, `tracking_ended`, `sos_resolved` (và `sos_created`, được gửi dưới dạng message `sos.event`). Client gặp `kind` lạ phải bỏ qua nhưng **vẫn** tiến cursor.
 
 `event.ack` (C→S): `{"v":1,"type":"event.ack","trip_id":"T","payload":{"event_seq":46}}` — client gửi sau khi lưu vào Room (gộp, ≤ 1/s). Server dùng để (a) không replay lại sau resume nhanh, (b) metric độ trễ. **Không** bắt buộc cho tính đúng đắn (cursor thật nằm ở client `last_event_seq`).
 

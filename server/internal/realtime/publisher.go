@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"motolink/internal/sos"
 	"motolink/internal/trip"
 )
 
@@ -102,4 +103,14 @@ func (h *Hub) Locations(ctx context.Context, tripID uuid.UUID, users []uuid.UUID
 
 func (h *Hub) Online(ctx context.Context, tripID uuid.UUID, users []uuid.UUID) (map[uuid.UUID]bool, error) {
 	return h.deps.Live.Online(ctx, tripID, users)
+}
+
+// PushSOSStatus delivers the sos.status aggregate to the sender's connection, wherever it lives.
+func (h *Hub) PushSOSStatus(ctx context.Context, sender, tripID uuid.UUID, ag sos.Aggregate) {
+	frame := marshalEnv("sos.status", "", tripID.String(), 0, ag)
+	if c := h.clientOf(sender); c != nil {
+		c.push(frame)
+		return
+	}
+	h.publishUserCtl(sender, busMsg{K: kUserFrame, F: frame})
 }

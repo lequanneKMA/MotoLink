@@ -1,6 +1,6 @@
 # PROGRESS — nhật ký tiến độ bộ tài liệu thiết kế MotoLink
 
-Nhánh làm việc: `docs/motolink-architecture`. Prompt gốc: `docs/prompt/MotoLink-planning-prompt.md` (mục 0). Trạng thái: **hoàn tất Phase A–D, Phase E chưa push được (không có remote)**, chờ chủ dự án duyệt (xem `16` §1 và `17` §1).
+Nhánh tài liệu: `docs/motolink-architecture`; code ở `feat/m0-foundation` → `feat/m2-trips` (remote `lequanneKMA/MotoLink`). Prompt gốc: `docs/prompt/MotoLink-planning-prompt.md` (mục 0). Trạng thái: **hoàn tất Phase A–D, Phase E đã push**, chờ chủ dự án duyệt (xem `16` §1 và `17` §1).
 
 ## Trạng thái phase
 
@@ -42,7 +42,11 @@ Môi trường soạn code: không có Docker daemon; kiểm bằng PostgreSQL 1
 | M2-T01 identity | xong | register/login/refresh xoay vòng + phát hiện dùng lại/logout/logout-all, max 10 phiên, argon2id có semaphore |
 | M2-T02 middleware | xong | request id, recover, access log (không body), auth + thu hồi, rate limit, lỗi problem+json, metrics |
 | M2-T03 idempotency | xong | replay, 422 khác body, 409 đồng thời, không cache 5xx, theo user |
-| M2-T04.. trip, invitation, member, tracking-session | **chưa** | |
+| M2-T04.. trip, invitation, member, tracking-session | xong | trips/members/invitations/sessions/route/snapshot/events, tài khoản (consent, devices, xóa, export), test phân quyền |
+| M3/M4 realtime | xong | `internal/realtime`: hub shard đơn chủ, ingest, ACK cộng dồn, Redis `loc_set` (Lua), presence ZSET + janitor, Pub/Sub có phát hiện gián đoạn, resume snapshot+replay, `resync.required`; test với PG + Redis thật, 2 instance |
+| M5 durable | xong (Kafka chưa chạy thật) | `internal/durable`: `PGSink` (direct_pg), `KafkaSink`/`HistoryWriter` (bisect + DLQ), outbox relay `inproc|kafka`, `POST …/points`. **Kafka không có trong sandbox**: code chỉ biên dịch + test phần logic (bisect, codec); cần chạy thử với compose. Chưa có công cụ `motolink-admin dlq` |
+| M6 SOS/thông báo/jobs | xong | `internal/sos` (T8, idempotent, receipt, resolve, `sos.status`), `internal/notify` (inbox, FCM HTTP v1 — no-op nếu thiếu `FCM_CREDENTIALS_FILE`), `internal/jobs` (timeout, stats, auto-end, partition, downsample, cleanup; khóa Redis) |
+| M0-T05 golden contract | chưa | |
 
 Sai lệch có chủ đích so với tài liệu:
 - Truy vấn SQL viết tay bằng `pgx` (chưa dùng `sqlc`, chưa cài); chuyển sang `sqlc` khi số truy vấn tăng.

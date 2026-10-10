@@ -19,6 +19,8 @@ import (
 	"motolink/internal/durable"
 	"motolink/internal/httpapi"
 	"motolink/internal/identity"
+	"motolink/internal/jobs"
+	"motolink/internal/notify"
 	"motolink/internal/platform/config"
 	"motolink/internal/platform/httpx"
 	"motolink/internal/platform/logx"
@@ -26,6 +28,7 @@ import (
 	"motolink/internal/platform/pg"
 	"motolink/internal/platform/ratelimit"
 	"motolink/internal/realtime"
+	"motolink/internal/sos"
 	"motolink/internal/tracking"
 	"motolink/internal/trip"
 )
@@ -67,13 +70,15 @@ func run(args []string) error {
 
 	checks := []httpx.Check{{Name: "postgres", Fn: pool.Ping}}
 	var (
-		limiter ratelimit.Limiter  = ratelimit.NewMemory()
-		revoker identity.Revoker   = identity.NoopRevoker{}
+		limiter ratelimit.Limiter = ratelimit.NewMemory()
+		revoker identity.Revoker  = identity.NoopRevoker{}
+		rc      redis.UniversalClient
 		live    realtime.LiveStore = realtime.NewMemStore()
 		bus     realtime.Bus       = realtime.NoBus{}
 	)
 	if cfg.RedisAddr != "" {
 		rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr, Password: cfg.RedisPass})
+		rc = rdb
 		defer rdb.Close()
 		checks = append(checks, httpx.Check{Name: "redis", Fn: func(c context.Context) error { return rdb.Ping(c).Err() }})
 		limiter = ratelimit.Redis{C: rdb}
@@ -111,6 +116,20 @@ func run(args []string) error {
 		sink, writer = ks, ks
 	}
 
+	var (
+		sosSvc      *sos.Service
+		apiTrips    *trip.Service
+		apiSessions *tracking.Service
+	)
+	pusher, err := notify.NewFCM(gctx, cfg.FCMCredentialsFile, cfg.FCMProjectID)
+	if err != nil {
+		return err
+	}
+	if !pusher.Enabled() {
+		log.Warn("FCM is not configured: notifications stay in-app only (set FCM_CREDENTIALS_FILE)")
+	}
+	notifySvc := notify.New(pool, pusher, log)
+
 	root := http.NewServeMux()
 	root.Handle("/", httpx.HealthMux(checks...))
 	if cfg.Roles.API {
@@ -127,8 +146,10 @@ func run(args []string) error {
 		})
 		trips := trip.NewService(pool, nil)
 		sessions := tracking.NewService(pool, trips, svc, nil)
-		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, DB: pool, Limiter: limiter, Log: log,
-			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg, Points: writer}
+		sosSvc = sos.NewService(pool, trips, nil)
+		apiTrips, apiSessions = trips, sessions
+		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, SOS: sosSvc, Notifications: notifySvc, DB: pool, Limiter: limiter, Log: log,
+			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg, Points: writer, Telemetry: httpapi.NewPromTelemetry(reg.Reg)}
 		root.Handle("/v1/", a.Handler())
 
 		if cfg.Roles.WS {
@@ -139,6 +160,9 @@ func run(args []string) error {
 			trips.SetPublisher(hub)
 			trips.SetLive(hub)
 			sessions.SetPublisher(hub)
+			sosSvc.SetPublisher(hub)
+			sosSvc.SetStatusPusher(hub)
+			hub.SetSOS(sos.WSHandler{S: sosSvc})
 			hub.Start(gctx)
 			fanout = hub
 			root.Handle("GET /v1/ws", hub)
@@ -151,7 +175,7 @@ func run(args []string) error {
 	}
 
 	if cfg.Roles.Worker {
-		disp := &durable.Dispatcher{Fanout: fanout, Log: log}
+		disp := &durable.Dispatcher{Fanout: fanout, Effects: notifySvc, Log: log}
 		var pub durable.Publisher = disp.Publisher()
 		if cfg.OutboxSink == "kafka" && kclient != nil {
 			pub = durable.KafkaPublisher(kclient)
@@ -162,6 +186,17 @@ func run(args []string) error {
 			hw := &durable.HistoryWriter{DB: pool, Cfg: durable.KafkaConfig{Brokers: cfg.KafkaBrokers, Log: log, Reg: reg.Reg}}
 			g.Go(func() error { return hw.Run(gctx) })
 		}
+		if apiTrips == nil { // worker-only process: build the services the jobs need
+			apiTrips = trip.NewService(pool, nil)
+			apiSessions = tracking.NewService(pool, apiTrips, nil, nil)
+		}
+		var lock jobs.Locker = &jobs.LocalLocker{}
+		if rc != nil {
+			lock = jobs.RedisLocker{C: rc}
+		}
+		sched := jobs.NewScheduler(jobs.Standard(pool, apiSessions, apiTrips, jobs.Config{
+			FullresDays: cfg.RetentionFullresDays, PartitionDays: cfg.RetentionPartitionDays}), lock, log, reg.Reg)
+		g.Go(func() error { sched.Run(gctx); return nil })
 		relay := durable.NewRelay(pool, pub, durable.RelayOptions{Log: log, Reg: reg.Reg})
 		g.Go(func() error { relay.Run(gctx); return nil })
 	}

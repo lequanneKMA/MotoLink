@@ -44,6 +44,7 @@ const (
 	kSharing    = "sharing"    // user ctl: sharing flag changed
 	kSession    = "session"    // user ctl: tracking session state changed
 	kRevoke     = "revoke"     // user ctl: auth session revoked
+	kUserFrame  = "uframe"     // user ctl: a ready frame for that user's connection (sos.status)
 )
 
 // ---- Redis ----
