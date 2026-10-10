@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "color": "#E53935",
+      "display_name": "owner",
+      "joined_at": "2026-01-01T00:00:00Z",
+      "role": "owner",
+      "share_history": true,
+      "sharing_state": "sharing",
+      "status": "active",
+      "trip_id": "00000000-0000-7000-8000-000000000001",
+      "user_id": "00000000-0000-7000-8000-000000000002"
+    },
+    {
+      "color": "#1E88E5",
+      "display_name": "an",
+      "joined_at": "2026-01-01T00:00:00Z",
+      "role": "member",
+      "share_history": true,
+      "sharing_state": "sharing",
+      "status": "active",
+      "trip_id": "00000000-0000-7000-8000-000000000001",
+      "user_id": "00000000-0000-7000-8000-000000000004"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "member_count": 1,
+  "my_membership": {
+    "color": "#E53935",
+    "joined_at": "2026-01-01T00:00:00Z",
+    "role": "owner",
+    "share_history": true,
+    "sharing_state": "sharing",
+    "status": "active",
+    "trip_id": "00000000-0000-7000-8000-000000000001",
+    "user_id": "00000000-0000-7000-8000-000000000002"
+  },
+  "trip": {
+    "created_at": "2026-01-01T00:00:00Z",
+    "ended_at": null,
+    "head_event_seq": 1,
+    "history_visibility": "members",
+    "id": "00000000-0000-7000-8000-000000000001",
+    "max_members": 15,
+    "name": "Đà Lạt",
+    "owner_id": "00000000-0000-7000-8000-000000000002",
+    "started_at": null,
+    "status": "draft"
+  }
+}

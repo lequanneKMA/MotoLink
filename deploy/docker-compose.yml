@@ -1,0 +1,98 @@
+# Local dev stack (docs/design/13 §2). Run from repo root:
+#   cp deploy/.env.example deploy/.env && docker compose -f deploy/docker-compose.yml up -d
+# Infra only:      docker compose -f deploy/docker-compose.yml up -d postgres redis kafka kafka-init
+# Server on host:  cd server && go run ./cmd/server   (use deploy/.env values with localhost ports)
+# Scale-out test:  --profile scale
+# Render-like profile (no Kafka): HISTORY_SINK=direct_pg OUTBOX_SINK=inproc, skip kafka services.
+name: motolink
+services:
+  postgres:
+    image: postgres:16-alpine           # no PostGIS (ADR-010)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-motolink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motolink_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-motolink}
+    command: ["postgres", "-c", "max_connections=50", "-c", "shared_buffers=256MB"]
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["pg_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-ttl",
+              "--save", "", "--appendonly", "no", "--requirepass", "${REDIS_PASSWORD:-redis_dev_password}"]
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-redis_dev_password} ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.3.1           # tag exists (research S5); env names per official image [CHƯA XÁC MINH: U9]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: -Xms384m -Xmx512m
+    volumes: ["kafka_data:/var/lib/kafka/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  kafka-init:
+    image: apache/kafka:4.3.1
+    depends_on: { kafka: { condition: service_healthy } }
+    volumes: ["./kafka-init/create-topics.sh:/create-topics.sh:ro"]
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    restart: "no"
+
+  migrate:
+    build: ../server
+    command: ["migrate", "up"]
+    env_file: .env
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
+
+  server:
+    build: ../server
+    env_file: .env
+    ports: ["127.0.0.1:8080:8080", "127.0.0.1:9100:9100"]
+    depends_on:
+      migrate:    { condition: service_completed_successfully }
+      redis:      { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  server2:                              # scale-out test (Pub/Sub across instances), M4
+    profiles: ["scale"]
+    build: ../server
+    env_file: .env
+    environment: { ROLES: "api,ws" }
+    ports: ["127.0.0.1:8081:8080"]
+    depends_on: { server: { condition: service_healthy } }
+    stop_grace_period: 30s
+
+volumes: { pg_data: {}, kafka_data: {} }

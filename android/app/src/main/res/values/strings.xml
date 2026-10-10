@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MotoLink</string>
+
+    <string name="notif_channel_tracking">Đang ghi hành trình</string>
+    <string name="notif_channel_system">Thông báo hệ thống</string>
+    <string name="notif_tracking_title">MotoLink đang ghi hành trình</string>
+    <string name="notif_tracking_text">Vị trí của bạn đang được ghi lại</string>
+    <string name="notif_paused_text">Đã tạm dừng ghi hành trình</string>
+    <string name="action_pause">Tạm dừng</string>
+    <string name="action_resume">Tiếp tục</string>
+    <string name="action_end">Kết thúc</string>
+
+    <string name="login_title">Đăng nhập</string>
+    <string name="register_title">Tạo tài khoản</string>
+    <string name="email">Email</string>
+    <string name="password">Mật khẩu</string>
+    <string name="display_name">Tên hiển thị</string>
+    <string name="action_login">Đăng nhập</string>
+    <string name="action_register">Đăng ký</string>
+    <string name="go_register">Chưa có tài khoản? Đăng ký</string>
+    <string name="go_login">Đã có tài khoản? Đăng nhập</string>
+    <string name="accept_terms">Tôi đồng ý với Điều khoản sử dụng</string>
+    <string name="accept_privacy">Tôi đồng ý với Chính sách quyền riêng tư</string>
+    <string name="logout">Đăng xuất</string>
+
+    <string name="home_title">Hành trình</string>
+    <string name="action_start">Bắt đầu ghi</string>
+    <string name="status_idle">Chưa ghi hành trình</string>
+    <string name="status_active">Đang ghi</string>
+    <string name="status_paused">Tạm dừng</string>
+    <string name="stat_distance">Quãng đường</string>
+    <string name="stat_duration">Thời gian</string>
+    <string name="stat_points">Số điểm</string>
+    <string name="stat_pending">Chưa đồng bộ</string>
+    <string name="history_title">Lịch sử</string>
+    <string name="no_history">Chưa có hành trình nào</string>
+    <string name="settings_title">Cài đặt</string>
+    <string name="oem_title">Giữ ứng dụng chạy khi tắt màn hình</string>
+
+    <string name="perm_disclosure_title">MotoLink dùng vị trí của bạn</string>
+    <string name="perm_disclosure_body">Khi bạn bấm \"Bắt đầu ghi\", MotoLink thu vị trí chính xác của bạn (toạ độ, tốc độ, thời gian) để vẽ hành trình và, sau này, chia sẻ cho các thành viên trong chuyến đi mà bạn tham gia.\n\nVị trí được thu cả khi màn hình tắt hoặc khi bạn dùng ứng dụng khác, cho đến khi bạn tạm dừng hoặc kết thúc. Một thông báo luôn hiển thị khi đang ghi.\n\nBạn có thể từ chối; khi đó các tính năng không cần vị trí vẫn dùng được.</string>
+    <string name="perm_agree">Đồng ý và tiếp tục</string>
+    <string name="perm_decline">Không đồng ý</string>
+    <string name="perm_background_title">Cho phép vị trí cả khi tắt màn hình</string>
+    <string name="perm_background_body">Để hành trình không bị gián đoạn khi bạn tắt màn hình, hãy chọn \"%1$s\" ở trang cài đặt sắp mở.</string>
+    <string name="perm_open_settings">Mở cài đặt</string>
+    <string name="perm_skip">Để sau</string>
+    <string name="perm_denied_location">Chưa có quyền vị trí nên chưa thể ghi hành trình.</string>
+    <string name="perm_approximate_warning">Bạn chỉ cấp vị trí xấp xỉ, hành trình sẽ kém chính xác.</string>
+
+    <string name="error_network">Không kết nối được máy chủ</string>
+    <string name="error_generic">Có lỗi xảy ra, thử lại sau</string>
+    <string name="error_invalid_credentials">Email hoặc mật khẩu không đúng</string>
+    <string name="error_email_taken">Email đã được đăng ký</string>
+    <string name="error_rate_limited">Thử quá nhiều lần, hãy đợi một lúc</string>
+    <string name="error_validation">Thông tin chưa hợp lệ</string>
+</resources>

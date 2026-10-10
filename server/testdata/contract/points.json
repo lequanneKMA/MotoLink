@@ -1,0 +1,9 @@
+{
+  "rejected": [
+    {
+      "reason": "invalid_coordinates",
+      "seq": 2
+    }
+  ],
+  "up_to_seq": 2
+}
