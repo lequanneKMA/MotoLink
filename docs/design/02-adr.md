@@ -331,7 +331,7 @@ Chi tiết bảng chuyển trạng thái ở `05-data-model.md` §Máy trạng t
 
 ## ADR-020 — Cắt scope MVP
 
-Không làm: trip-level pause; quên mật khẩu; Google Sign-In (M6+); offline map; chat/voice; geofence; so sánh/ chia sẻ công khai; đa thiết bị đồng thời cho cùng một session; sửa/thu hồi mã mời hàng loạt; web client; iOS; reinstate thành viên bị xóa; tracing OTel; PostGIS.
+Không làm: bắt đầu tracking khi chưa có mạng (cần `session_id` do server cấp; xem `11` §7.1); trip-level pause; quên mật khẩu; Google Sign-In (M6+); offline map; chat/voice; geofence; so sánh/ chia sẻ công khai; đa thiết bị đồng thời cho cùng một session; sửa/thu hồi mã mời hàng loạt; web client; iOS; reinstate thành viên bị xóa; tracing OTel; PostGIS.
 Có thể làm sớm nếu rẻ: `transfer-ownership` (cần để owner rời trip).
 
 ---
