@@ -11,7 +11,7 @@ Xác nhận (trả lời ngắn gọn từng mục; mặc định ở `16` §1 s
 - [x] **D-04** Xin đủ quyền chạy nền, gồm `ACCESS_BACKGROUND_LOCATION` (đã xác nhận 2026-10-10) — bắt đầu đọc chính sách Play gốc sớm (U1) và chuẩn bị video/disclosure.
 - [x] **D-05** Giữ Kafka với lối thoát `direct_pg` (đã xác nhận 2026-10-10) — nhưng xem tension với D-09.
 - [ ] **D-06/D-07** Retention 30/90/365 ngày; mặc định riêng tư lịch sử?
-- [ ] **D-09** Đã chọn "backend miễn phí" nhưng **chưa có nhà cung cấp cụ thể**: cho biết nơi chạy (RAM/CPU/đĩa/băng thông, có WebSocket + process chạy liên tục không), tên miền, nơi lưu backup. Chặn trước M4; M0–M3 chạy local.
+- [x] **D-09** Render free (đã xác nhận 2026-10-10, ADR-021). Còn lại trước M4: đọc trang Render chính thức (U14), chọn PG miễn phí không hết hạn, quyết định backup.
 - [ ] **D-10/D-11** Một kết nối WS/user; trip tối đa 15; mã mời do owner tạo.
 - [ ] **D-14/D-19** Monorepo; tên app/package id.
 - [ ] **D-16** Nội dung cảnh báo "SOS không thay thế số khẩn cấp".

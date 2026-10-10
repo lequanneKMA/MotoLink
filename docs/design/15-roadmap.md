@@ -632,7 +632,7 @@ Checklist review: timeout 100 ms; metric trạng thái breaker
 ```
 ```
 ID:            M4-T05
-Tiêu đề:       Profile scale (2 instance) + Caddy LB + benchmark B3
+Tiêu đề:       Profile scale (2 instance, CHẠY LOCAL) + Caddy LB + benchmark B3
 Loại:          infra
 Phụ thuộc:     M4-T03
 Song song với: M4-T04
@@ -765,7 +765,7 @@ Checklist review: ghi rõ cửa sổ mất dữ liệu còn tồn tại
 ```
 ```
 ID:            M5-T09
-Tiêu đề:       HistorySink direct_pg (lối thoát không Kafka)
+Tiêu đề:       HistorySink direct_pg (đường deploy Render, ADR-021) — làm TRƯỚC kafkaSink nếu cần deploy sớm
 Loại:          backend
 Phụ thuộc:     M5-T03
 Song song với: M5-T08
@@ -940,13 +940,13 @@ Checklist review: khóa giải mã lưu tách biệt
 ```
 ```
 ID:            M7-T04
-Tiêu đề:       Triển khai VPS: Docker, Caddy TLS, firewall, runbook
+Tiêu đề:       Triển khai beta lên Render free (ADR-021): image, env, health check, migration, runbook; kèm kiểm WebSocket/ngủ-thức thật
 Loại:          infra
 Phụ thuộc:     M6
 Song song với: M7-T03
 Input:         13 §2, 11 §6
 Output:        deploy/, docs/runbook.md
-Acceptance:    wss hoạt động từ app thật; chỉ 80/443/SSH mở; rolling restart làm client reconnect 1 lần
+Acceptance:    wss hoạt động từ app thật qua Render; đo thời gian thức lại và ảnh hưởng tới SOS; băng thông tháng được theo dõi; (nếu sau này có VPS: chỉ 80/443/SSH mở)
 Lệnh test:     kiểm thử từ ngoài mạng
 Kích thước:    M
 Checklist review: SSH key-only; cập nhật tự động bảo mật OS

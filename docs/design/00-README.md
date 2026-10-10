@@ -7,7 +7,7 @@ Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture` (chỉ có commit
 | File | Nội dung | Mục prompt §11 |
 |---|---|---|
 | [01-summary-scope-stories](01-summary-scope-stories.md) | Executive summary, phạm vi MVP, user stories + acceptance | 1, 2 |
-| [02-adr](02-adr.md) | 20 ADR (Context/Decision/Alternatives/Consequences) | 3 |
+| [02-adr](02-adr.md) | 21 ADR (Context/Decision/Alternatives/Consequences) | 3 |
 | [03-architecture-diagrams](03-architecture-diagrams.md) | Sơ đồ tổng thể; sequence: location, reconnect, SOS, persistence | 4, 5 |
 | [04-modules](04-modules.md) | Module/package Go và Android | 6 |
 | [05-data-model](05-data-model.md) | ERD, DDL PostgreSQL, máy trạng thái, transaction, retention | 7 |
@@ -44,7 +44,7 @@ Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture` (chỉ có commit
 | 004 | UUIDv7, `session_id` server cấp, `(session_id, seq)` | Chốt |
 | 005 | Live path tách khỏi durable path; ACK = đã vào Kafka | Chốt |
 | 006 | Redis Pub/Sub per-trip, ref-count, lọc echo | Chốt |
-| 007 | Kafka KRaft 1 node, at-least-once + sink idempotent; lối thoát `direct_pg` | Chốt — D-05 đã xác nhận giữ Kafka (tension với D-09) |
+| 007 | Kafka KRaft 1 node, at-least-once + sink idempotent; lối thoát `direct_pg` | Chốt — D-05 giữ Kafka ở dev/test; deploy Render dùng `direct_pg` (ADR-021) |
 | 008 | Outbox cho trip event/SOS | Chốt |
 | 009 | Hub shard single-owner + coalescing | Chốt |
 | 010 | PG không PostGIS; partition tháng; retention | Chốt — D-06 |
@@ -54,15 +54,16 @@ Phiên bản: 2026-10-10. Nhánh: `docs/motolink-architecture` (chỉ có commit
 | 014 | MapLibre + tile do mình kiểm soát; không tile OSM công cộng | Chốt hướng — **spike M1**, D-15 |
 | 015 | SOS: PG sự thật, WS + FCM, dedupe | Chốt — D-16 |
 | 016 | Riêng tư mặc định + consent | Chốt — D-08 (pháp lý) |
-| 017 | Compose, Caddy, Prometheus/Grafana | Chốt cho 1 host; **D-09: dùng hạ tầng miễn phí, chưa chọn nhà cung cấp (R-21)** |
+| 017 | Compose, Caddy, Prometheus/Grafana (host Linux đủ RAM) | Chốt |
 | 018 | Android single-module, OkHttp/Retrofit | Chốt — D-13 |
 | 019 | Offline-first, `outbox_ops` | Chốt |
 | 020 | Cắt scope MVP | Chốt |
+| 021 | Beta trên **Render free**: `direct_pg`, không Kafka khi deploy; Kafka ở dev/test | Chốt (D-09); điều kiện Render `[CHƯA XÁC MINH]`, rủi ro R-21 |
 
 ## 4. Những điều bạn cần biết ngay
 
 - **Rủi ro lớn nhất** là OEM kill dịch vụ nền → làm spike máy thật (M1) trước backend.
-- **Kafka không bắt buộc về kỹ thuật** ở quy mô này; giữ vì mục tiêu học, có lối thoát.
+- **Kafka không bắt buộc về kỹ thuật** ở quy mô này; giữ vì mục tiêu học (dev/test/CI); **deploy Render free chạy `direct_pg`** vì Kafka không vừa 512 MB (ADR-021).
 - **Không có tuyên bố "không mất dữ liệu"**; xem các cửa sổ mất dữ liệu ở `16` §3.
 - **Nút thắt capacity thật**: băng thông ra hàng tháng (~147 GB/tháng ở kịch bản xấu) và đĩa PG — không phải CPU/RAM (`13` §4).
 - Nhiều nguồn chính thức **không truy cập được** từ môi trường soạn tài liệu (xem `research/unverified.md`); các điểm đó mang nhãn `[CHƯA XÁC MINH]`.

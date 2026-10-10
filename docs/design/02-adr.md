@@ -27,6 +27,7 @@ Nhãn: `[ĐÃ XÁC MINH]`, `[GIẢ ĐỊNH]`, `[CẦN XÁC NHẬN]`, `[CHƯA XÁ
 | 018 | Android: single-module, OkHttp/Retrofit, Room, WorkManager | Chốt |
 | 019 | Offline-first: Room là nguồn UI; outbox cục bộ; reconcile bằng snapshot | Chốt |
 | 020 | Cắt scope MVP (danh sách các thứ **không** làm) | Chốt |
+| 021 | Triển khai beta trên Render free: `direct_pg`, không Kafka khi deploy; Kafka giữ ở dev/test | Chốt (D-09), điều kiện Render `[CHƯA XÁC MINH]` |
 
 ### Các điểm trong prompt gốc được đánh giá lại (mục 1 của prompt yêu cầu nêu rõ)
 
@@ -336,8 +337,28 @@ Có thể làm sớm nếu rẻ: `transfer-ownership` (cần để owner rời t
 
 ---
 
+## ADR-021 — Mục tiêu triển khai beta: Render free (không Kafka khi deploy)
+
+**Context.** D-09 (2026-10-10): chủ dự án chọn dùng hạ tầng miễn phí, cụ thể Render free. Điều kiện Render free (nguồn thứ cấp, `[CHƯA XÁC MINH: U14]`): web service 512 MB RAM / 0.1 CPU, ngủ sau 15 phút không có traffic vào và thức lại mất ≈ 1 phút; Postgres free hết hạn sau 30 ngày; Key Value (Redis) free 25 MB không bền; băng thông Hobby 5 GB/tháng. Không có đường nào chạy Kafka (JVM ~700 MiB) trong 512 MB / 0.1 CPU.
+
+**Decision.**
+1. **Môi trường deploy beta (Render free) chạy `HISTORY_SINK=direct_pg`**, một service duy nhất `ROLES=api,ws,worker` (đúng modular monolith, ADR-001), không có Kafka. Outbox relay vẫn chạy nhưng publish tới Redis Pub/Sub và gọi notifier **trong process** (nhánh `eventbus` không-Kafka: `OUTBOX_SINK=inproc`).
+2. **Kafka vẫn được giữ trong code, Compose dev và test** (D-05): đường `kafkaSink` là đường đầy đủ cho M5 và dành cho hạ tầng đủ RAM; học và kiểm chứng Kafka trên máy local/CI. Hai sink dùng chung interface và test chung (M5-T09 nâng ưu tiên).
+3. **Redis:** Key Value free 25 MB đủ cho dữ liệu `08` (< 1 MB); vì không bền, chấp nhận mất khi restart (đã là thiết kế: Redis chỉ chứa trạng thái tạm). Một instance ⇒ Pub/Sub liên instance chỉ được kiểm chứng ở local (profile `scale`).
+4. **PostgreSQL:** Postgres free của Render hết hạn 30 ngày ⇒ không dùng làm nguồn sự thật dài hạn. Cần PG miễn phí không hết hạn từ nhà cung cấp khác hoặc backup/restore định kỳ + tạo lại; nhà cung cấp cụ thể `[CHƯA XÁC MINH]` — chọn ở M4 (D-09). `retention` giảm theo dung lượng thực của gói.
+5. **Ngủ/thức:** SOS là chức năng an toàn; nếu service đang ngủ thì SOS đầu tiên có thể trễ ≈ 1 phút `[CHƯA XÁC MINH]`. Giảm thiểu: trong lúc có chuyến đang ghi, traffic WS/REST giữ service thức (cần xác minh WS có tính là traffic: U14); thêm keep-alive bên ngoài chỉ khi được phép theo điều khoản `[CHƯA XÁC MINH]`; client hiển thị "đang chờ gửi" và retry (đã có, ADR-015); **trước phát hành rộng bắt buộc nâng cấp gói luôn bật**.
+6. **Băng thông 5 GB/tháng** `[CHƯA XÁC MINH]` ⇒ chỉ đủ cho beta nhỏ (tính ở `13` §7). Không chạy benchmark 500 kết nối trên Render; benchmark chạy ở máy riêng/local.
+7. Capacity `13` §4 vẫn là tính toán cho host 4 GB; không áp cho Render free.
+
+**Alternatives.** Thuê VPS rẻ (đủ chạy Compose như `13`); chia dịch vụ managed free; bỏ Kafka hẳn (mâu thuẫn D-05). Chọn Render free theo yêu cầu chủ dự án cho giai đoạn phát triển/beta kín.
+
+**Consequences.** Cửa sổ mất dữ liệu L-3 (RF=1 Kafka) không áp dụng khi deploy trên Render (không Kafka); thay bằng: điểm đã ACK nằm trong PG (ACK sau `COMMIT`). Ngược lại cửa sổ do restart/ngủ của service: điểm chưa ACK nằm ở client (không mất). Bộ nhớ Go phải ≤ ~350 MiB (`GOMEMLIMIT`), CPU 0.1 rất thấp ⇒ giới hạn số kết nối đồng thời (khởi điểm 50, `[GIẢ ĐỊNH]`, đo ở M3) và giảm tần suất fan-out/ nén.
+
+---
+
 ## Lịch sử
 
 | Ngày | Thay đổi |
 |---|---|
 | 2026-10-10 | Bản đầu, ADR-001…020 |
+| 2026-10-10 | Cập nhật ADR-003/013/017 theo D-02/D-04/D-09; thêm ADR-021 (Render free) |

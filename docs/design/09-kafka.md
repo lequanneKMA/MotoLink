@@ -126,4 +126,4 @@ Xem ADR-005 mục 1–8 (đã trả lời đầy đủ; file này triển khai c
 
 ## 9. Lối thoát không Kafka
 
-`HistorySink` có hai triển khai: `kafkaSink` (mặc định) và `directPGSink` (đệm trong bộ nhớ → batch insert cùng câu lệnh). Giữ cùng ngữ nghĩa ACK (`up_to_seq` sau khi `COMMIT`). Bật bằng `HISTORY_SINK=direct_pg`. Dùng khi: VPS thiếu RAM, Kafka gây sự cố vận hành.
+`HistorySink` có hai triển khai: `kafkaSink` (mặc định) và `directPGSink` (đệm trong bộ nhớ → batch insert cùng câu lệnh). Giữ cùng ngữ nghĩa ACK (`up_to_seq` sau khi `COMMIT`). Bật bằng `HISTORY_SINK=direct_pg`. Dùng khi: host thiếu RAM (**mặc định khi deploy Render free, ADR-021**), Kafka gây sự cố vận hành. Khi không có Kafka, outbox relay chạy với `OUTBOX_SINK=inproc` (publish Redis Pub/Sub và gọi notifier trong process, vẫn at-least-once theo `published_at`).

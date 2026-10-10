@@ -58,3 +58,15 @@ Nhãn chung cho bảng trên: `[ĐÃ XÁC MINH: https://proxy.golang.org, 2026-1
 
 - WebFetch/curl bị chặn cho một số host (xem `unverified.md`). Mọi thông tin phụ thuộc các host đó được gắn `[CHƯA XÁC MINH]`.
 - Số liệu capacity ở `13-deploy-observability.md` là **tính toán từ giả định**, không phải đo đạc; được gắn `[GIẢ ĐỊNH]` và có kế hoạch đo ở `14`.
+
+## 6. Hạ tầng Render free (D-09) — tra ngày 2026-10-10
+
+Chỉ có **nguồn thứ cấp** qua kết quả tìm kiếm (trang chính thức render.com không truy cập được: DNS bị chặn). Nhãn `[CHƯA XÁC MINH]` cho đến khi đọc trang chính thức.
+
+| Thông tin | Nguồn thứ cấp (kết quả tìm kiếm) | Nhãn |
+|---|---|---|
+| Free web service: 512 MB RAM, 0.1 CPU; ngủ sau 15 phút không có traffic vào; thức lại ≈ 1 phút; chung pool 750 giờ/tháng/workspace | livemy.app/blog/render-pricing; agentdeals.dev/vendor/render; jwatte.com/blog/render-com-platform-review.md | `[CHƯA XÁC MINH]` |
+| Free Postgres: hết hạn sau 30 ngày (ân hạn 14 ngày rồi xóa); kích thước nguồn mâu thuẫn (1 GB vs 256 MB) | livemy.app; flaviocopes.com/hosting-free-tiers.md; agentdeals.dev | `[CHƯA XÁC MINH]` |
+| Free Key Value (Redis): 25 MB, không bền (mất khi restart) | livemy.app; kết quả tìm kiếm | `[CHƯA XÁC MINH]` |
+| Thay đổi giá từ 23/04/2026, workspace hiện hữu chuyển 01/08/2026; Hobby còn **5 GB băng thông/tháng** (giảm từ 100 GB), quá mức tính 0.15 USD/GB | bex.co/blog/2026/07/31/...; kết quả tìm kiếm | `[CHƯA XÁC MINH]` |
+| WebSocket trên free web service; background worker có miễn phí không; hành vi spin-down khi có WS đang mở | Không có kết quả nào trả lời | `[CHƯA XÁC MINH]` — xem U14 |

@@ -248,3 +248,23 @@ Hoãn (ADR-002/017): thêm `request_id` + `conn_id` vào log là đủ. Nếu th
 2. Chạy `server` bằng `go run` trên host (hot reload), trỏ tới hạ tầng.
 3. Profile `scale`: chạy 2 instance thật bằng Compose để kiểm tra Pub/Sub liên instance.
 4. Profile `obs`: Prometheus + Grafana với dashboard mẫu.
+
+## 7. Hồ sơ triển khai Render free (ADR-021, D-09)
+
+Điều kiện Render là **số thứ cấp, chưa xác minh** (`research/sources.md` §6, U14).
+
+| Hạng mục | Render free | Hệ quả cho MotoLink |
+|---|---|---|
+| Web service | 512 MB RAM, 0.1 CPU; ngủ sau 15 phút không có traffic vào, thức ≈ 1 phút; 750 giờ/tháng chung | Một service `ROLES=api,ws,worker`; `GOMEMLIMIT≈350MiB`; ít kết nối (khởi điểm 50); SOS lúc đang ngủ trễ ≈ 1 phút (ADR-021 mục 5) |
+| Kafka | Không khả thi (JVM ~700 MiB) | `HISTORY_SINK=direct_pg`, `OUTBOX_SINK=inproc`; Kafka chỉ ở local/CI |
+| Redis | Key Value 25 MB, không bền | Đủ (< 1 MB dùng); chấp nhận mất khi restart |
+| PostgreSQL | Free hết hạn 30 ngày, ân hạn 14 ngày | Cần PG miễn phí không hết hạn của nhà cung cấp khác, hoặc tạo lại + restore định kỳ; chọn ở M4 |
+| Băng thông | Hobby 5 GB/tháng (mất ≈ 0.15 USD/GB nếu vượt) | Xem tính toán bên dưới |
+| TLS/domain | Render cấp HTTPS cho `*.onrender.com` | Không cần Caddy khi deploy Render |
+| Cổng/WS | WebSocket: chưa xác minh | Kiểm tra ngay ở M3-T02 bằng kết nối thử; nếu bị chặn → đổi host |
+
+**Băng thông (tính từ `13` §4.2: ≈ 680 B/s/viewer xuống + ≈ 115 B/s lên cho mỗi người đang ghi):** một người ≈ 0.8 KB/s ≈ 2.9 MB/giờ. Beta 10 người × 4 giờ/ngày ≈ 115 MB/ngày ≈ 3.5 GB/tháng ⇒ **sát trần 5 GB**; 15–20 người sẽ vượt. Chỉ đủ cho beta rất nhỏ; giảm tần suất khi đứng yên và gộp frame (đã thiết kế) là bắt buộc.
+
+**Quy trình deploy tối thiểu:** Docker image của `server` + biến môi trường (`DATABASE_URL`, `REDIS_ADDR`, `HISTORY_SINK=direct_pg`, `OUTBOX_SINK=inproc`, `ROLES=api,ws,worker`, `JWT_*`, `FCM_*`); health check `/readyz`; migration chạy trước khi khởi động (lệnh `migrate up` trong bước start/pre-deploy); cấu hình chính xác theo trang Render `[CHƯA XÁC MINH]`.
+
+**Không dùng được trên Render free:** benchmark 500 kết nối, test 2 instance, test chaos Kafka — chạy ở local hoặc máy tải riêng.
