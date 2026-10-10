@@ -22,6 +22,8 @@ okhttp = "5.5.0"
 retrofit = "3.0.0"
 maplibre = "13.6.1"
 junit = "4.13.2"
+firebaseBom = "34.4.0"          # UNVERIFIED (Google Maven blocked in the authoring sandbox)
+googleServices = "4.4.3"        # UNVERIFIED; only used when app/google-services.json exists
 
 [libraries]
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -53,6 +55,9 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 retrofit-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
 maplibre = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
 junit = { module = "junit:junit", version.ref = "junit" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+google-services-plugin = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test" }
 
 [plugins]

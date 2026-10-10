@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -42,7 +44,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Unit, onNotifications: () -> Unit) {
     val ctx = LocalContext.current
     val c = container()
     val vm = containerViewModel { HomeViewModel(it.tracking) }
@@ -57,6 +59,8 @@ fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit) {
             TopAppBar(
                 title = { Text(stringResource(R.string.home_title)) },
                 actions = {
+                    IconButton(onClick = onTrips) { Icon(Icons.Filled.Groups, contentDescription = "Chuyến đi") }
+                    IconButton(onClick = onNotifications) { Icon(Icons.Filled.Notifications, contentDescription = "Thông báo") }
                     IconButton(onClick = onHistory) { Icon(Icons.Filled.History, contentDescription = stringResource(R.string.history_title)) }
                     IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title)) }
                 },

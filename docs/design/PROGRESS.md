@@ -46,7 +46,7 @@ Môi trường soạn code: không có Docker daemon; kiểm bằng PostgreSQL 1
 | M3/M4 realtime | xong | `internal/realtime`: hub shard đơn chủ, ingest, ACK cộng dồn, Redis `loc_set` (Lua), presence ZSET + janitor, Pub/Sub có phát hiện gián đoạn, resume snapshot+replay, `resync.required`; test với PG + Redis thật, 2 instance |
 | M5 durable | xong (Kafka chưa chạy thật) | `internal/durable`: `PGSink` (direct_pg), `KafkaSink`/`HistoryWriter` (bisect + DLQ), outbox relay `inproc|kafka`, `POST …/points`. **Kafka không có trong sandbox**: code chỉ biên dịch + test phần logic (bisect, codec); cần chạy thử với compose. Chưa có công cụ `motolink-admin dlq` |
 | M6 SOS/thông báo/jobs | xong | `internal/sos` (T8, idempotent, receipt, resolve, `sos.status`), `internal/notify` (inbox, FCM HTTP v1 — no-op nếu thiếu `FCM_CREDENTIALS_FILE`), `internal/jobs` (timeout, stats, auto-end, partition, downsample, cleanup; khóa Redis) |
-| M0-T05 golden contract | chưa | |
+| M0-T05 golden contract | xong | `server/testdata/contract/*.json` do Go test sinh (`-update`); `ContractTest` phía Android giải mã bằng chính DTO của app. Đổi field ở một bên ⇒ test đỏ |
 
 Sai lệch có chủ đích so với tài liệu:
 - Truy vấn SQL viết tay bằng `pgx` (chưa dùng `sqlc`, chưa cài); chuyển sang `sqlc` khi số truy vấn tăng.
@@ -64,6 +64,18 @@ Sai lệch có chủ đích so với tài liệu:
 | Phiên bản thư viện | Kotlin 2.3.21, KSP 2.3.12, coroutines 1.10.2, retrofit 3.0.0, okhttp 5.5.0, serialization 1.11.0, MapLibre 13.6.1: **xác minh tồn tại** trên Maven Central. AGP 8.13.0, Compose BOM, Room, WorkManager, DataStore, lifecycle, activity/navigation, play-services-location: **không xác minh được** — nâng lên bản ổn định mới nhất khi sync |
 | Tên package MapLibre (`org.maplibre.android.*`, `org.maplibre.geojson.*`) | `[CHƯA XÁC MINH]` |
 
-Phạm vi M1 đã có trong code: ghi hành trình solo, dịch vụ nền, lấy mẫu thích ứng, phát hiện gián đoạn, lịch sử, bản đồ vẽ tuyến (nền trống — chưa chọn nguồn tile, D-15), luồng quyền (disclosure → vị trí → thông báo → nền), hướng dẫn OEM, đăng nhập/đăng ký (cần backend). Chưa có: chuyến đi, WebSocket client, SOS, FCM, đồng bộ lên server.
+Phạm vi M1 đã có trong code: ghi hành trình solo, dịch vụ nền, lấy mẫu thích ứng, phát hiện gián đoạn, lịch sử, bản đồ vẽ tuyến (nền trống — chưa chọn nguồn tile, D-15), luồng quyền (disclosure → vị trí → thông báo → nền), hướng dẫn OEM, đăng nhập/đăng ký (cần backend). 
 
 Chạy lần đầu trên máy bạn: mở thư mục `android/` bằng Android Studio (cần JDK 17+ và Android SDK 36), để Gradle sync; sửa phiên bản nếu thiếu; emulator dùng `http://10.0.2.2:8080/` (đã mặc định cho debug), máy thật đặt `api.baseUrl=http://<IP-LAN>:8080/` trong `android/local.properties`. Test logic không cần SDK: `cd android && ./gradlew :logic:test` (khi chỉ có JDK, tạm bỏ `include(":app")` trong `settings.gradle.kts`).
+
+### Android — phần đã thêm sau khi backend xong (chưa build được `:app` trong sandbox)
+
+| Phần | Kiểm chứng |
+|---|---|
+| `:logic`: `TripLiveModel` (snapshot + sự kiện bền theo cursor + vị trí không lùi + SOS), `JwtExpiry`/`subject` | **52 test JVM xanh** (chạy bằng `android/scripts/test-logic.sh`, không cần SDK) |
+| `:app` lớp mạng mở rộng (trips, sessions, points, SOS, notifications, devices), `TokenRefresher` dùng chung cho HTTP + WebSocket, `Idempotency-Key` tự động | **Biên dịch được** trong dự án JVM tạm (stub `TokenStore`/`BuildConfig`) + **8 test hợp đồng** giải mã JSON thật của server |
+| `RealtimeClient` (OkHttp WebSocket: hello+resume, snapshot/replay, gap→resync qua REST, upload GPS theo ACK cộng dồn, SOS hàng đợi, 4401/4409/1008, backoff) | Chưa biên dịch/chạy; logic quyết định nằm trong `:logic` đã test |
+| `SyncWorker`, `SessionSync`, `PointUploader` (REST dự phòng), `SosRepository`, `PushRegistrar` + `MotoLinkMessagingService` (FCM, chỉ bật khi có `app/google-services.json`) | Chưa biên dịch/chạy |
+| UI: danh sách chuyến đi, tạo/nhập mã, chi tiết chuyến (bản đồ thành viên, trạng thái LIVE/STALE/LOST, mời, ghi, SOS, thông báo) | Chưa biên dịch/chạy |
+
+Việc bạn cần làm lần đầu: sync Gradle (sửa phiên bản androidx/AGP/firebase-bom nếu thiếu), tạo Firebase project và đặt `google-services.json` vào `android/app/` nếu muốn push, chạy server (`docker compose up`) rồi thử 2 thiết bị/emulator cùng một chuyến.

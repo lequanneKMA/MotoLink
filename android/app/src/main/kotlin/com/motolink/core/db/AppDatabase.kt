@@ -6,13 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [LocalSessionEntity::class, TrackPointEntity::class],
-    version = 1,
+    entities = [LocalSessionEntity::class, TrackPointEntity::class, TripEntity::class, PendingSosEntity::class],
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sessions(): SessionDao
     abstract fun points(): PointDao
+    abstract fun trips(): TripDao
+    abstract fun sos(): SosDao
 
     companion object {
         fun create(context: Context): AppDatabase =

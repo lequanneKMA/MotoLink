@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val hasFcm = file("google-services.json").exists()
+if (hasFcm) apply(plugin = "com.google.gms.google-services")
+
 android {
     namespace = "com.motolink"
     compileSdk = 36 // targetSdk 36 is required for new Play uploads from 2026-08-31 (research S1)
@@ -17,6 +20,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("boolean", "HAS_FCM", hasFcm.toString())
     }
 
     buildTypes {
@@ -86,9 +90,12 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.serialization)
 
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.play.services.location)
     implementation(libs.maplibre)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
 }

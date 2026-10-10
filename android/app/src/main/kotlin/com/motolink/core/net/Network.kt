@@ -1,6 +1,7 @@
 package com.motolink.core.net
 
 import com.motolink.BuildConfig
+import com.motolink.logic.JwtExpiry
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -44,41 +45,71 @@ class AppHeadersInterceptor(private val versionName: String, private val deviceI
     }
 }
 
+/** Adds a fresh Idempotency-Key to mutating requests that do not carry one (docs/design/06 §1.3). */
+class IdempotencyInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val req = chain.request()
+        if (req.method == "GET" || req.header("Idempotency-Key") != null) return chain.proceed(req)
+        return chain.proceed(req.newBuilder().header("Idempotency-Key", java.util.UUID.randomUUID().toString()).build())
+    }
+}
+
 /**
- * On 401, exchanges the refresh token once (single-flight) and retries. A rejected refresh
- * (invalid/reused) clears the session. Refresh tokens rotate, so two concurrent refreshes
- * would trigger the server's reuse detection; hence the lock.
+ * Exchanges the refresh token (single-flight). Refresh tokens rotate, so two concurrent refreshes would trigger the
+ * server's reuse detection; every caller (HTTP authenticator, WebSocket) therefore goes through this lock.
  */
-class TokenAuthenticator(
+class TokenRefresher(
     private val tokens: TokenStore,
     private val refreshApi: RefreshApi,
     private val events: SessionEvents,
-) : Authenticator {
+) {
     private val lock = Any()
 
-    override fun authenticate(route: Route?, response: Response): Request? {
-        if (response.request.url.encodedPath.endsWith("/auth/refresh") || response.request.url.encodedPath.endsWith("/auth/login")) return null
-        if (responseCount(response) >= 2) return null
-        synchronized(lock) {
-            val current = tokens.current() ?: return null
-            val sent = response.request.header("Authorization")?.removePrefix("Bearer ")
-            // Another thread already refreshed while we waited for the lock: just retry with the new token.
-            if (sent != null && sent != current.access) return response.request.newBuilder().header("Authorization", "Bearer ${current.access}").build()
-            return try {
-                val fresh = runBlocking { refreshApi.refresh(RefreshRequest(current.refresh)) }
-                val t = Tokens(fresh.accessToken, fresh.refreshToken)
-                runBlocking { tokens.save(t) }
-                response.request.newBuilder().header("Authorization", "Bearer ${t.access}").build()
-            } catch (e: retrofit2.HttpException) {
-                if (e.code() == 401) {
-                    runBlocking { tokens.clear() }
-                    events.signalExpired()
-                }
-                null
-            } catch (e: java.io.IOException) {
-                null // offline: keep the session, the call fails with 401 and the user can retry
+    /**
+     * @param staleAccess the access token the caller used and found rejected/expiring; if another thread already
+     * replaced it, the current tokens are returned without another round trip.
+     * @return fresh tokens, or null when refreshing is impossible (signed out, offline, or rejected).
+     */
+    fun refreshBlocking(staleAccess: String?): Tokens? = synchronized(lock) {
+        val current = tokens.current() ?: return null
+        if (staleAccess != null && staleAccess != current.access) return current
+        try {
+            val fresh = runBlocking { refreshApi.refresh(RefreshRequest(current.refresh)) }
+            val t = Tokens(fresh.accessToken, fresh.refreshToken)
+            runBlocking { tokens.save(t) }
+            t
+        } catch (e: retrofit2.HttpException) {
+            if (e.code() == 401) {
+                runBlocking { tokens.clear() }
+                events.signalExpired()
             }
+            null
+        } catch (e: java.io.IOException) {
+            null // offline: keep the session, callers retry later
         }
+    }
+
+    /** Returns tokens whose access token stays valid for at least [minValidMs], refreshing when needed. */
+    suspend fun ensureFresh(minValidMs: Long = 120_000, nowMs: Long = System.currentTimeMillis()): Tokens? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val t = tokens.current() ?: return@withContext null
+            val exp = JwtExpiry.expiresAtMs(t.access)
+            if (exp != null && exp - nowMs > minValidMs) t else refreshBlocking(t.access) ?: t.takeIf { exp != null && exp > nowMs }
+        }
+}
+
+/** On 401, refreshes once and retries the request. */
+class TokenAuthenticator(
+    private val tokens: TokenStore,
+    private val refresher: TokenRefresher,
+) : Authenticator {
+    override fun authenticate(route: Route?, response: Response): Request? {
+        val path = response.request.url.encodedPath
+        if (path.endsWith("/auth/refresh") || path.endsWith("/auth/login") || path.endsWith("/auth/register")) return null
+        if (responseCount(response) >= 2) return null
+        val sent = response.request.header("Authorization")?.removePrefix("Bearer ")
+        val t = refresher.refreshBlocking(sent) ?: return null
+        return response.request.newBuilder().header("Authorization", "Bearer ${t.access}").build()
     }
 
     private fun responseCount(r: Response): Int {
@@ -126,9 +157,12 @@ class NetworkModule(
     private val plainClient = base().build()
     val refreshApi: RefreshApi = retrofit(plainClient).create(RefreshApi::class.java)
 
+    val refresher = TokenRefresher(tokens, refreshApi, events)
+
     val client: OkHttpClient = base()
         .addInterceptor(AuthInterceptor(tokens))
-        .authenticator(TokenAuthenticator(tokens, refreshApi, events))
+        .addInterceptor(IdempotencyInterceptor())
+        .authenticator(TokenAuthenticator(tokens, refresher))
         .build()
 
     val api: ApiService = retrofit(client).create(ApiService::class.java)

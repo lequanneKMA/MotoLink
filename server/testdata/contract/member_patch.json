@@ -1,0 +1,12 @@
+{
+  "membership": {
+    "color": "#1E88E5",
+    "joined_at": "2026-01-01T00:00:00Z",
+    "role": "member",
+    "share_history": true,
+    "sharing_state": "paused",
+    "status": "active",
+    "trip_id": "00000000-0000-7000-8000-000000000001",
+    "user_id": "00000000-0000-7000-8000-000000000004"
+  }
+}

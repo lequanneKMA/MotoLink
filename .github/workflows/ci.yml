@@ -31,4 +31,4 @@ jobs:
       - run: ./gradlew :logic:test --no-daemon
       # The :app module needs the Android SDK; GitHub's ubuntu image ships one. First run after a fresh clone
       # will also show whether the unverified library versions in gradle/libs.versions.toml resolve.
-      - run: ./gradlew :app:assembleDebug --no-daemon
+      - run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon

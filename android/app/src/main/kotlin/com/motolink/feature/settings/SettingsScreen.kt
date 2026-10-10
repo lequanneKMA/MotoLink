@@ -58,7 +58,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogin: () -> Unit) {
         ) {
             Text("Tài khoản", style = MaterialTheme.typography.titleMedium)
             if (signedIn) {
-                OutlinedButton(onClick = { scope.launch { c.auth.logout() } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.logout)) }
+                OutlinedButton(onClick = { scope.launch { c.signOut() } }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.logout)) }
             } else {
                 Button(onClick = onLogin, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_login)) }
             }
@@ -73,7 +73,10 @@ fun SettingsScreen(onBack: () -> Unit, onLogin: () -> Unit) {
                 onClick = {
                     // Withdrawing consent stops recording immediately (docs/design/11 §5.1).
                     TrackingService.end(ctx)
-                    scope.launch { c.prefs.withdrawLocationConsent() }
+                    scope.launch {
+                        c.prefs.withdrawLocationConsent()
+                        c.trips.withdrawLocationConsent()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Rút lại đồng ý dùng vị trí") }

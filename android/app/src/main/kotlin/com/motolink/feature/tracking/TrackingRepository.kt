@@ -34,9 +34,15 @@ class TrackingRepository(private val db: AppDatabase, private val clock: Clock =
         return s
     }
 
-    /** Records a session whose id the server issued (POST /trips/{id}/tracking-sessions). Not used in M1. */
-    suspend fun startServerSession(serverSessionId: String, tripId: String): LocalSessionEntity {
-        val s = LocalSessionEntity(serverSessionId, tripId, "active", clock.nowMs(), null, 0, true)
+    /** Records a session whose id the server issued (POST /trips/{id}/tracking-sessions). */
+    suspend fun startServerSession(serverSessionId: String, tripId: String, lastSeq: Long = 0): LocalSessionEntity {
+        // Only one open session at a time: a stale local row for the same server session is reused, others are closed.
+        db.sessions().get(serverSessionId)?.let { existing ->
+            if (existing.status == "ended") db.sessions().setStatus(serverSessionId, "active")
+            return db.sessions().get(serverSessionId)!!
+        }
+        db.sessions().open()?.let { db.sessions().end(it.sessionId, clock.nowMs()) }
+        val s = LocalSessionEntity(serverSessionId, tripId, "active", clock.nowMs(), null, lastSeq, true, serverStatus = "active")
         db.sessions().insert(s)
         return s
     }

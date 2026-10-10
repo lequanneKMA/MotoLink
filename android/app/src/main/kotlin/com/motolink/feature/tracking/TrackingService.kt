@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import com.motolink.feature.sync.SyncWorker
 
 /**
  * Foreground service (type "location", research S2) that records GPS only while a session is
@@ -45,13 +47,23 @@ class TrackingService : Service() {
     private var session: LocalSessionEntity? = null
     private var gpsOn = false
 
-    private val repo get() = (application as MotoLinkApp).container.tracking
+    private val container get() = (application as MotoLinkApp).container
+    private val repo get() = container.tracking
 
     override fun onCreate() {
         super.onCreate()
         _running.value = true
         source = LocationSources.create(applicationContext)
         scope.launch { for (f in fixes) process(f) }
+        // The server ended my session (trip ended, removed, timeout): stop recording into the void.
+        scope.launch {
+            container.realtime.trackingEnded.collect { sid ->
+                if (sid == session?.sessionId) {
+                    stopGps()
+                    stopForegroundAndSelf()
+                }
+            }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -117,6 +129,7 @@ class TrackingService : Service() {
             repo.resume(s.sessionId)
             startGps()
         }
+        syncServer(s) // best effort; owed calls are retried by SyncWorker
         getSystemService(android.app.NotificationManager::class.java)
             .notify(Notifications.ID_TRACKING, Notifications.tracking(this, paused = pause))
     }
@@ -124,8 +137,22 @@ class TrackingService : Service() {
     private suspend fun endSession() {
         val s = session ?: repo.currentOpen()
         stopGps()
-        if (s != null) repo.end(s.sessionId)
+        if (s != null) {
+            repo.end(s.sessionId)
+            if (s.serverIssued) {
+                // Unsent points are drained before the session closes on the server (it refuses them afterwards).
+                val ok = withTimeoutOrNull(10_000) { container.sessionSync.push(s.sessionId) } ?: false
+                if (!ok) SyncWorker.kick(applicationContext)
+            }
+        }
         stopForegroundAndSelf()
+    }
+
+    private fun syncServer(s: LocalSessionEntity) {
+        if (!s.serverIssued) return
+        container.appScope.launch {
+            if (!container.sessionSync.push(s.sessionId)) SyncWorker.kick(applicationContext)
+        }
     }
 
     private fun startGps() {
