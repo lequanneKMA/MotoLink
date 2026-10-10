@@ -97,6 +97,8 @@ Chung: franz-go consumer group; `DisableAutoCommit`; commit **sau** khi side-eff
 - Với mỗi event: xác định người nhận (member active tại thời điểm xử lý trừ actor), `INSERT INTO notifications … ON CONFLICT (user_id,type,ref_event_id) DO NOTHING` — nếu insert mới ⇒ cần push (idempotency chống push trùng khi replay; xem lưu ý FCM bên dưới).
 - Push (FCM, `firebase.google.com/go/v4`): `sos.*` ưu tiên **high**, payload dữ liệu tối thiểu (`sos_id`, `trip_id`, `kind`) — client lấy chi tiết qua REST (không đặt tọa độ vào payload push; U8 giới hạn kích thước chưa xác minh). `trip_started` high-ish/normal; `member_joined` normal hoặc bỏ push nếu thiết bị đang online.
 - Cập nhật `sos_recipients.delivered_push_at/push_status`, `notifications.push_status/push_attempts`.
+- Outbox định tuyến theo `kind`: `sos_created` và `sos_resolved` → `motolink.sos.v1`; mọi kind còn lại → `motolink.trip-events.v1`.
+- Sự kiện `tracking_ended` có `data.end_reason='timeout'` (OEM kill, `12` §5.3) ⇒ notifier tạo thông báo loại `tracking_interrupted` cho **chủ session** (push `system`, chỉ máy có FCM token).
 - **Retry:** lỗi tạm (5xx, quota) ⇒ tối đa 5 lần trong tiến trình, backoff 1 s → 30 s có jitter; hết lần ⇒ ghi `push_status='failed'` và gửi record vào DLQ. Lỗi vĩnh viễn (token `UNREGISTERED`/`INVALID`) ⇒ xóa `devices.fcm_token`, không retry.
 - **FCM không đảm bảo exactly-once:** nếu tiến trình chết sau khi FCM nhận nhưng trước khi ghi DB, replay có thể gửi trùng ⇒ payload chứa `ref_event_id`; client **dedupe theo `ref_event_id`** (Room). Trùng được chấp nhận; mất không.
 - Throughput nhỏ ⇒ xử lý tuần tự theo partition, song song giới hạn 8 goroutine cho lời gọi FCM trong một lô.
