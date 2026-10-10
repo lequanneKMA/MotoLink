@@ -226,7 +226,7 @@ Mã lỗi: `bad_request`, `unauthorized`, `token_expired`, `forbidden`, `not_fou
 | 1013 | Slow consumer / quá tải | Reconnect backoff |
 | 4401 | Token hết hạn / bị thu hồi | Refresh token qua REST; nếu refresh thất bại → đăng nhập lại |
 | 4403 | Không còn quyền (bị xóa khỏi trip…) cho kết nối này | Cập nhật UI, không retry trip đó |
-| 4409 | Bị thay thế bởi kết nối mới cùng `(user, device)` | Không reconnect tự động nếu do chính app mở hai kết nối |
+| 4409 | Bị thay thế bởi kết nối mới của cùng `user` (một kết nối/user, xem `08` §4.2) | Không reconnect tự động nếu do chính app mở hai kết nối |
 | 4429 | Rate limit nghiêm trọng | Backoff dài |
 
 Reconnect: backoff mũ 1 s → 30 s có jitter ±50 %, reset sau kết nối ổn định 60 s.
