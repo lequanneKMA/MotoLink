@@ -139,6 +139,11 @@ sequenceDiagram
     C->>S: location.update gửi lại các điểm chưa ACK
     S-->>C: location.ack
     S-->>C: presence.event của thành viên khác
+    opt kết nối đang sống và token sắp hết hạn
+        C->>S: auth.refresh (access_token mới, lấy bằng REST refresh)
+        S-->>C: ack
+        Note over C,S: Không refresh trước exp + 30 s thì server đóng 4401
+    end
 ```
 
 ## 4. S3 — SOS (kể cả khi người gửi mất mạng, người nhận không chạy app)
