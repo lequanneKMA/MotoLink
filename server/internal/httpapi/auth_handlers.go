@@ -17,7 +17,7 @@ func (a *API) getConfig(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *API) register(w http.ResponseWriter, r *http.Request) error {
-	if err := a.limit(r.Context(), "register:"+a.clientIP(r), 10, time.Hour); err != nil {
+	if err := a.limit(r.Context(), "register:"+a.clientIP(r), int64(a.registerLimit()), time.Hour); err != nil {
 		return err
 	}
 	var in identity.RegisterInput
@@ -121,3 +121,10 @@ func shortHash(s string) string {
 }
 
 var _ = apperr.Unauthorized // keep import used if handlers change
+
+func (a *API) registerLimit() int {
+	if a.RegisterPerHour > 0 {
+		return a.RegisterPerHour
+	}
+	return 10
+}

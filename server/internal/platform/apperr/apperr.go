@@ -20,7 +20,8 @@ type Error struct {
 	Title      string
 	Detail     string
 	Fields     []FieldError
-	RetryAfter int // seconds, for 429
+	RetryAfter int            // seconds, for 429
+	Extra      map[string]any // machine-readable context, e.g. the open session for session_already_open
 	Cause      error
 }
 
@@ -70,6 +71,13 @@ func EmailTaken() *Error {
 	return new(http.StatusConflict, "email_taken", "Email đã được đăng ký")
 }
 func Conflict(code, title string) *Error { return new(http.StatusConflict, code, title) }
+func Gone(code, title string) *Error     { return new(http.StatusGone, code, title) }
+func ForbiddenCode(code, title string) *Error {
+	return new(http.StatusForbidden, code, title)
+}
+func Unavailable() *Error {
+	return new(http.StatusServiceUnavailable, "unavailable", "Dịch vụ tạm thời không khả dụng")
+}
 func RequestInProgress() *Error {
 	return new(http.StatusConflict, "request_in_progress", "Yêu cầu đang được xử lý")
 }

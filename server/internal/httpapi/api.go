@@ -9,6 +9,8 @@ import (
 
 	"motolink/internal/identity"
 	"motolink/internal/platform/ratelimit"
+	"motolink/internal/tracking"
+	"motolink/internal/trip"
 )
 
 // ClientConfig is served by GET /v1/config (docs/design/06 §1.2).
@@ -35,12 +37,16 @@ func DefaultClientConfig() ClientConfig {
 // API wires the REST handlers.
 type API struct {
 	Identity         *identity.Service
+	Trips            *trip.Service
+	Sessions         *tracking.Service
 	DB               *pgxpool.Pool
 	Limiter          ratelimit.Limiter
 	Log              *slog.Logger
 	TrustedProxyHops int
+	RegisterPerHour  int // 0 = 10
 	Client           ClientConfig
 	Registerer       prometheus.Registerer // optional
+	Telemetry        TelemetrySink         // optional: client quality samples
 
 	m metricSet
 }
@@ -69,5 +75,17 @@ func (a *API) Handler() http.Handler {
 	mux.Handle("POST /v1/auth/logout-all", a.authed(a.logoutAll))
 	mux.Handle("GET /v1/me", a.authed(a.getMe))
 	mux.Handle("PATCH /v1/me", a.authed(a.patchMe))
+	a.accountRoutes(mux)
+	if a.Trips != nil {
+		a.tripRoutes(mux)
+	}
+	if a.Sessions != nil {
+		a.sessionRoutes(mux)
+	}
 	return a.base(mux)
+}
+
+// TelemetrySink receives anonymous client-side samples (age of displayed positions, ACK latency).
+type TelemetrySink interface {
+	Observe(locationAgeS, ackLatencyS []float64)
 }

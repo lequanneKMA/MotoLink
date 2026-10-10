@@ -244,13 +244,14 @@ func (s *Service) SessionActive(ctx context.Context, sid uuid.UUID) (bool, error
 	if revoked, err := s.revoker.IsRevoked(ctx, sid); err == nil {
 		return !revoked, nil
 	}
-	var revoked bool
+	var total, revoked int
 	err := s.db.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM refresh_tokens WHERE family_id=$1 AND revoked_at IS NOT NULL)`, sid).Scan(&revoked)
+		`SELECT count(*), count(*) FILTER (WHERE revoked_at IS NOT NULL) FROM refresh_tokens WHERE family_id=$1`, sid).Scan(&total, &revoked)
 	if err != nil {
 		return false, err
 	}
-	return !revoked, nil
+	// An unknown family (rows purged or never existed) is not an active session.
+	return total > 0 && revoked == 0, nil
 }
 
 // GetUser loads a profile.
@@ -374,6 +375,9 @@ func isUnique(err error, constraint string) bool {
 
 // wrap passes API errors through and turns anything else into a 500.
 func wrap(err error) error {
+	if err == nil {
+		return nil
+	}
 	if _, ok := apperr.As(err); ok {
 		return err
 	}

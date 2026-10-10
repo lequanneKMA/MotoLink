@@ -23,6 +23,8 @@ import (
 	"motolink/internal/platform/metrics"
 	"motolink/internal/platform/pg"
 	"motolink/internal/platform/ratelimit"
+	"motolink/internal/tracking"
+	"motolink/internal/trip"
 )
 
 func main() {
@@ -90,7 +92,9 @@ func run(args []string) error {
 			DB: pool, Hasher: identity.NewHasher(identity.DefaultArgon(cfg.Argon2Concurrency)), Signer: signer,
 			Revoker: revoker, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL, Log: log,
 		})
-		a := &httpapi.API{Identity: svc, DB: pool, Limiter: limiter, Log: log,
+		trips := trip.NewService(pool, nil)
+		sessions := tracking.NewService(pool, trips, svc, nil)
+		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, DB: pool, Limiter: limiter, Log: log,
 			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg}
 		root.Handle("/v1/", a.Handler())
 	}

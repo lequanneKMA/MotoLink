@@ -13,15 +13,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"motolink/internal/identity"
 	"motolink/internal/platform/id"
 	"motolink/internal/platform/ratelimit"
 	"motolink/internal/testutil/pgtest"
+	"motolink/internal/tracking"
+	"motolink/internal/trip"
 )
 
 type env struct {
 	srv  *httptest.Server
 	api  *API
+	pool *pgxpool.Pool
+	svc  *identity.Service
 	hits atomic.Int64 // invocations of the demo idempotent handler
 }
 
@@ -36,8 +42,11 @@ func newEnv(t *testing.T) *env {
 	h := identity.NewHasher(identity.ArgonParams{TimeCost: 1, MemoryKiB: 8, Threads: 1, SaltLen: 16, KeyLen: 32, MaxConcurr: 2})
 	svc := identity.NewService(identity.Deps{DB: pool, Hasher: h, Signer: signer, AccessTTL: 15 * time.Minute,
 		RefreshTTL: 24 * time.Hour * 60, Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
-	e := &env{}
-	e.api = &API{Identity: svc, DB: pool, Limiter: ratelimit.NewMemory(), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Client: DefaultClientConfig()}
+	e := &env{pool: pool, svc: svc}
+	trips := trip.NewService(pool, nil)
+	sessions := tracking.NewService(pool, trips, svc, nil)
+	e.api = &API{Identity: svc, Trips: trips, Sessions: sessions, DB: pool, Limiter: ratelimit.NewMemory(), RegisterPerHour: 10000,
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Client: DefaultClientConfig()}
 	hnd := e.api.Handler().(http.Handler)
 	// Mount a demo idempotent endpoint next to the real router for middleware tests.
 	mux := http.NewServeMux()

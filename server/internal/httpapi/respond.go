@@ -22,6 +22,7 @@ type problem struct {
 	Detail    string              `json:"detail,omitempty"`
 	RequestID string              `json:"request_id,omitempty"`
 	Errors    []apperr.FieldError `json:"errors,omitempty"`
+	Extra     map[string]any      `json:"extra,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -46,7 +47,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	w.WriteHeader(e.Status)
 	_ = json.NewEncoder(w).Encode(problem{
 		Type: "https://motolink.app/errors/" + e.Code, Code: e.Code, Title: e.Title, Status: e.Status,
-		Detail: e.Detail, RequestID: RequestID(r.Context()), Errors: e.Fields,
+		Detail: e.Detail, RequestID: RequestID(r.Context()), Errors: e.Fields, Extra: e.Extra,
 	})
 }
 
