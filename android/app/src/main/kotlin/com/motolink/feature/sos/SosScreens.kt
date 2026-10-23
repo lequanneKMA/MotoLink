@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.motolink.feature.map.rememberMapStyleUrl
 import com.motolink.feature.map.LiveMap
 import com.motolink.feature.map.MapMarker
 import com.motolink.logic.SosAlert
@@ -152,7 +153,7 @@ fun ReceiveSosPage(
                     MapMarker("sos", at, (sos.senderName ?: "?").take(1).uppercase(), Palette.Red, label = sos.senderName, isSos = true),
                     me?.let { MapMarker("me", it, "B", Color(0xFF1565C0), selfArrow = true) },
                 )
-                LiveMap(markers = markers, fitSignal = 0, dark = false)
+                LiveMap(markers = markers, fitSignal = 0, dark = false, styleUrl = rememberMapStyleUrl())
             } else {
                 Box(Modifier.fillMaxSize().background(Color(0xFFB71C1C)), contentAlignment = Alignment.Center) {
                     Text("Không có vị trí kèm theo", color = Color.White, style = MaterialTheme.typography.bodyLarge)

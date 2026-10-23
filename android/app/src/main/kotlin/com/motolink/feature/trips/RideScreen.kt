@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.motolink.feature.map.rememberMapStyleUrl
 import com.motolink.feature.map.LiveMap
 import com.motolink.feature.map.MapMarker
 import com.motolink.feature.realtime.ConnState
@@ -170,7 +171,7 @@ fun RideScreen(tripId: String, onBack: () -> Unit) {
     val rec = ui.mySession
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        LiveMap(markers = markers, fitSignal = fitSignal, dark = dark)
+        LiveMap(markers = markers, fitSignal = fitSignal, dark = dark, styleUrl = rememberMapStyleUrl())
 
         // ---- top: lag banner, group pill, "see everybody" ----
         Column(Modifier.fillMaxWidth()) {

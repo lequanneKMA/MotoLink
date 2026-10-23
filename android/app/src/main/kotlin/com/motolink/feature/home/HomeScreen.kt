@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.motolink.feature.map.rememberMapStyleUrl
 import com.motolink.feature.map.RouteMap
 import com.motolink.feature.tracking.TrackingService
 import com.motolink.feature.tracking.hasLocationConsent
@@ -61,7 +63,7 @@ import kotlinx.coroutines.launch
  * (docs/design-ui, "Đi một mình"). Group riding lives in the trips list.
  */
 @Composable
-fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Unit, onNotifications: () -> Unit) {
+fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Unit, onNotifications: () -> Unit, onNavigate: () -> Unit) {
     val ctx = LocalContext.current
     val c = container()
     val vm = containerViewModel { HomeViewModel(it.tracking) }
@@ -72,7 +74,7 @@ fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Uni
     val recording = ui.state != RecState.IDLE
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        RouteMap(points = ui.route, followLatest = ui.state == RecState.ACTIVE, dark = isSystemInDarkTheme())
+        RouteMap(points = ui.route, followLatest = ui.state == RecState.ACTIVE, dark = isSystemInDarkTheme(), styleUrl = rememberMapStyleUrl())
 
         MapControl(Icons.Filled.Menu, "Mở menu", { menuOpen = true }, Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp))
         if (recording) SpeedDial(ui.speedKmh, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
@@ -84,6 +86,7 @@ fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Uni
             Column(Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.align(Alignment.CenterHorizontally).width(44.dp).heightIn(min = 5.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(3.dp)))
                 ModeSwitch(group = false, onSolo = {}, onGroup = onTrips)
+                if (!recording) DestinationBar(onNavigate)
 
                 if (recording) {
                     Text(
@@ -126,6 +129,18 @@ fun HomeScreen(onHistory: () -> Unit, onSettings: () -> Unit, onTrips: () -> Uni
                 }
             }
         }
+    }
+}
+
+/** "Bạn muốn đi đâu?" — opens search, then route choice and turn-by-turn. */
+@Composable
+private fun DestinationBar(onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 62.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Bạn muốn đi đâu?", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Icon(Icons.Filled.Search, null, Modifier.size(30.dp))
     }
 }
 

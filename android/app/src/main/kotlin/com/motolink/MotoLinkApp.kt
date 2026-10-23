@@ -17,6 +17,7 @@ class MotoLinkApp : Application() {
         Notifications.createChannels(this)
         AppNotifications.createChannels(this)
         container.realtime.start()
+        container.appScope.launch { container.mapConfig.refresh() }
         SyncWorker.schedulePeriodic(this)
         // A SOS from another member must reach the user even when the app is in the background.
         container.appScope.launch { container.realtime.sosIncoming.collect { AppNotifications.showSos(this@MotoLinkApp, it) } }
@@ -24,6 +25,7 @@ class MotoLinkApp : Application() {
         container.appScope.launch {
             container.auth.signedIn.distinctUntilChanged().collect { signedIn ->
                 if (signedIn) {
+                    container.mapConfig.refresh()
                     container.push.register()
                     container.trips.refresh()
                     SyncWorker.kick(this@MotoLinkApp)

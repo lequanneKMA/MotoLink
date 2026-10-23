@@ -79,3 +79,12 @@ Chạy lần đầu trên máy bạn: mở thư mục `android/` bằng Android 
 | UI: danh sách chuyến đi, tạo/nhập mã, chi tiết chuyến (bản đồ thành viên, trạng thái LIVE/STALE/LOST, mời, ghi, SOS, thông báo) | Chưa biên dịch/chạy |
 
 Việc bạn cần làm lần đầu: sync Gradle (sửa phiên bản androidx/AGP/firebase-bom nếu thiếu), tạo Firebase project và đặt `google-services.json` vào `android/app/` nếu muốn push, chạy server (`docker compose up`) rồi thử 2 thiết bị/emulator cùng một chuyến.
+
+### Bản đồ & chỉ đường (stack tự host)
+
+| Phần | Kiểm chứng |
+|---|---|
+| Server `internal/maps`: proxy OSRM (chuẩn hóa, tự thử lại không `exclude=motorway`), tìm địa điểm theo bảng `places` (không dấu), sinh style MapLibre sáng/tối; endpoint `/v1/route`, `/v1/geocode`, `/v1/map/style/{theme}` | Test Go xanh (OSRM giả, Postgres thật với `unaccent`) + test hợp đồng JSON |
+| `:logic` `Nav.kt`: giải mã polyline6, bám tuyến, còn lại/điểm rẽ kế, phát hiện lệch tuyến, lời thoại tiếng Việt | 18 test JVM |
+| `deploy/maps`: `prepare.sh` (OSRM, planetiler, Noto fonts, osm2pgsql → `search.sql`), Martin, PostGIS, compose profile `maps` | `docker compose config` hợp lệ. **Chưa chạy** (không có Docker daemon/Geofabrik trong sandbox): tên image, cờ lệnh, `exclude=motorway`, tên font Martin cần kiểm lần đầu. **PostGIS chưa được test** (sandbox không có extension), chỉ phần SQL import |
+| Android: `NavScreens`, `NavMap`, `NavViewModel`, `Speech`, `MapConfigRepository` | Chưa biên dịch; DTO được test hợp đồng |

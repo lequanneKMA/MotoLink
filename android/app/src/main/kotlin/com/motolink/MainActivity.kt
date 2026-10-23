@@ -18,6 +18,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.motolink.feature.auth.LoginScreen
+import com.motolink.feature.nav.NavScreen
 import com.motolink.feature.notifications.AppNotifications
 import com.motolink.feature.notifications.NotificationsScreen
 import com.motolink.feature.trips.CreateTripScreen
@@ -65,6 +66,7 @@ private object Routes {
     const val HISTORY_DETAIL = "history/{id}"
     const val SETTINGS = "settings"
     const val TRIPS = "trips"
+    const val NAVIGATE = "navigate"
     const val NEW_TRIP = "trips/new"
     const val TRIP = "trip/{id}?sos={sos}"
     const val NOTIFICATIONS = "notifications"
@@ -112,6 +114,7 @@ private fun AppNav(link: DeepLink?, onLinkHandled: () -> Unit) {
                 onHistory = { nav.navigate(Routes.HISTORY) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
                 onTrips = { nav.navigate(Routes.TRIPS) },
+                onNavigate = { nav.navigate(Routes.NAVIGATE) },
                 onNotifications = { nav.navigate(Routes.NOTIFICATIONS) },
             )
         }
@@ -121,6 +124,7 @@ private fun AppNav(link: DeepLink?, onLinkHandled: () -> Unit) {
                 onSettings = { nav.navigate(Routes.SETTINGS) }, signedIn = signedIn, onLogin = { nav.navigate(Routes.LOGIN) },
             )
         }
+        composable(Routes.NAVIGATE) { NavScreen(onClose = { nav.popBackStack() }) }
         composable(Routes.NEW_TRIP) {
             CreateTripScreen(onBack = { nav.popBackStack() }, onOpen = { id -> nav.navigate(Routes.trip(id)) { popUpTo(Routes.TRIPS) } })
         }

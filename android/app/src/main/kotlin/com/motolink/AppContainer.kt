@@ -8,6 +8,8 @@ import com.motolink.core.net.NetworkModule
 import com.motolink.core.net.SessionEvents
 import com.motolink.core.net.TokenStore
 import com.motolink.feature.auth.AuthRepository
+import com.motolink.feature.map.MapConfigRepository
+import com.motolink.feature.nav.NavRepository
 import com.motolink.feature.notifications.PushRegistrar
 import com.motolink.feature.realtime.RealtimeClient
 import com.motolink.feature.sos.SosRepository
@@ -55,6 +57,8 @@ class AppContainer(context: Context) {
     )
     val sos = SosRepository(db, network.api, realtime, clock)
     val push = PushRegistrar(app, trips)
+    val mapConfig = MapConfigRepository(network.api)
+    val nav = NavRepository(network.api)
 
     /** Logout: server call (best effort), then forget everything that belongs to the account. */
     suspend fun signOut() {

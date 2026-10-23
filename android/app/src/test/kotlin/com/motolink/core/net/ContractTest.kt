@@ -86,4 +86,22 @@ class ContractTest {
         assertTrue(n.items.any { it.type == "sos" })
         assertTrue(n.items.all { it.readAt == null })
     }
+
+    @Test fun configAdvertisesTheMapStack() {
+        val c = read<ConfigDto>("config")
+        assertEquals("/v1/map/style/{theme}", c.tileStyleUrl)
+        assertTrue(c.routingEnabled && c.searchEnabled)
+    }
+
+    @Test fun routeAndPlaceSearch() {
+        val r = read<RouteResponse>("route").routes.single()
+        assertEquals(4300.5, r.distanceM)
+        assertEquals(720.0, r.durationS)
+        assertEquals(listOf("turn", "arrive"), r.steps.map { it.type })
+        assertEquals("right", r.steps[0].modifier)
+        assertEquals(10.77, r.steps[0].at.lat)
+        val p = read<PlacesResponse>("geocode").items.single()
+        assertEquals("Nhà thờ Đức Bà", p.name)
+        assertEquals("tourism", p.kind)
+    }
 }

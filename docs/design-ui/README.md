@@ -18,10 +18,15 @@ nút ≥ 56 dp; đỏ chỉ dành cho SOS và cảnh báo nguy hiểm; trạng t
 | `auth` | `feature/auth/AuthScreens.kt` | Thêm đăng ký (đồng ý điều khoản tách riêng) |
 | Theme/thành phần | `ui/Theme.kt`, `ui/Components.kt` | Màu và cỡ chữ lấy từ `index.css` của thiết kế |
 
-## Có trong thiết kế nhưng CHƯA làm (cần backend/engine riêng)
+## Dẫn đường (đã làm, chưa chạy thử)
 
-`route`, `navigate`, `navigate-alert`, `route-planner` (tìm đường, dẫn đường từng bước, giọng nói, tuyến cho đoàn: cần routing engine
-và nguồn tile, chưa chọn — D-15); `report` (báo kẹt xe/ngập: cần dịch vụ báo cáo cộng đồng); `fall` (phát hiện ngã bằng cảm biến);
+`solo` → ô "Bạn muốn đi đâu?" → `feature/nav/NavScreens.kt`: tìm địa điểm (PostGIS) → chọn tuyến (OSRM, tối đa 3 phương án) → dẫn đường từng bước
+(biểu ngữ rẽ, giọng nói tiếng Việt qua TextToSpeech của máy, tự tìm lại đường khi lệch). Logic nằm ở `logic/Nav.kt` (có test). Dẫn đường chỉ chạy khi
+màn hình đang mở (foreground). Hạ tầng: `deploy/maps/README.md`.
+
+## Có trong thiết kế nhưng CHƯA làm
+
+`navigate-alert` và `report` (cảnh báo/báo cáo cộng đồng), `route-planner` (tuyến cho đoàn);  (báo kẹt xe/ngập: cần dịch vụ báo cáo cộng đồng); `fall` (phát hiện ngã bằng cảm biến);
 `group-stop`, `group-stop-other` ("Chụp ảnh/Nghỉ chân…", "Chờ bạn/Đi trước": cần loại sự kiện mới ở server);
 cài đặt "Bản đồ offline", "Vòng tốc độ", "Link cho người nhà", "Giọng nói dẫn đường".
-Bản đồ hiện là nền trống (chưa có tile) nên chưa giống bản vẽ có đường phố.
+Bản đồ nền là nền trống cho tới khi bạn dựng `deploy/maps` và đặt `TILE_BASE_URL`; khi đó app tự lấy style từ `GET /v1/config`.

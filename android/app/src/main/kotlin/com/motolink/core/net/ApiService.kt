@@ -23,6 +23,15 @@ interface ApiService {
     @POST("v1/auth/logout")
     suspend fun logout()
 
+    @GET("v1/config")
+    suspend fun config(): ConfigDto
+
+    @POST("v1/route")
+    suspend fun route(@Body body: RouteRequest): RouteResponse
+
+    @GET("v1/geocode")
+    suspend fun geocode(@Query("q") q: String, @Query("lat") lat: Double? = null, @Query("lng") lng: Double? = null): PlacesResponse
+
     @GET("v1/me")
     suspend fun me(): MeResponse
 

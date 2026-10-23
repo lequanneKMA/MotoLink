@@ -117,6 +117,13 @@ Rate limit mã mời: 10 lần sai/giờ/user + 30/giờ/IP. Mã 8 ký tự Croc
 | `POST /notifications/read` | self | `{ids:[…]}` hoặc `{all:true}` | `204` | | — | notifications |
 | `GET /sync/bootstrap` | self | — | `{trips:[{trip,my_membership,head_event_seq,my_open_session?}],server_time}` — gọi khi đăng nhập/ mở app sau thời gian dài; app dùng để dựng Room | | | trips, trip_members, tracking_sessions |
 
+### 2.8b Bản đồ và chỉ đường (stack tự host: OSM + OSRM + PostGIS, xem `deploy/maps/README.md`)
+| Method & path | Quyền | Mô tả |
+|---|---|---|
+| `GET /map/style/{light\|dark}` | public | Style MapLibre (OpenMapTiles) sinh từ `TILE_BASE_URL`; `404` nếu chưa cấu hình |
+| `POST /route` `{from:{lat,lng},to:{lat,lng},alternatives?}` | any | Proxy OSRM → `{routes:[{distance_m,duration_s,geometry(polyline6),steps:[{distance_m,duration_s,name,type,modifier,exit?,at}]}]}`; `409 no_route`, `503` nếu chưa cấu hình `OSRM_URL`; 60 yêu cầu/phút/người |
+| `GET /geocode?q=&lat=&lng=` | any | Tìm địa điểm trong bảng `places` (PostGIS import), không dấu cũng khớp; `{items:[{name,kind,lat,lng}]}`; `503` nếu chưa cấu hình `GEOCODE_DATABASE_URL`; 90 yêu cầu/phút/người |
+
 ### 2.9 Hệ thống
 Các endpoint dưới đây **không lưu bảng PostgreSQL** (có lý do ghi bên cạnh); chúng không vi phạm quy tắc "endpoint trỏ về bảng có thật".
 

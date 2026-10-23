@@ -112,6 +112,7 @@ fun LiveMap(
             m.addOnCameraMoveListener { cameraTick++ }
             m.addOnCameraIdleListener { cameraTick++ }
             val builder = if (styleUrl.isNullOrBlank()) Style.Builder().fromJson(blankStyle(dark)) else Style.Builder().fromUri(styleUrl)
+            styleReady = false
             m.setStyle(builder) { styleReady = true; cameraTick++ }
         }
     }
