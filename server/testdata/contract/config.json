@@ -1,0 +1,13 @@
+{
+  "limits": {
+    "max_frame_bytes": 16384,
+    "max_points_per_frame": 20,
+    "max_trip_members": 15
+  },
+  "min_app_version": "0.0.0",
+  "routing_enabled": true,
+  "search_enabled": true,
+  "tile_style_url": "/v1/map/style/{theme}",
+  "ws_v_max": 1,
+  "ws_v_min": 1
+}

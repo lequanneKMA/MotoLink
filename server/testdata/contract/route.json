@@ -1,0 +1,33 @@
+{
+  "routes": [
+    {
+      "distance_m": 4300.5,
+      "duration_s": 720,
+      "geometry": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+      "steps": [
+        {
+          "at": {
+            "lat": 10.77,
+            "lng": 106.7
+          },
+          "distance_m": 300,
+          "duration_s": 40,
+          "modifier": "right",
+          "name": "Nguyễn Huệ",
+          "type": "turn"
+        },
+        {
+          "at": {
+            "lat": 10.79,
+            "lng": 106.72
+          },
+          "distance_m": 0,
+          "duration_s": 0,
+          "modifier": "",
+          "name": "Lê Lợi",
+          "type": "arrive"
+        }
+      ]
+    }
+  ]
+}

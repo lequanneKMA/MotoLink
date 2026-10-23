@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"motolink/internal/maps"
 	"motolink/internal/platform/id"
 	"motolink/internal/realtime"
 	"motolink/internal/trip"
@@ -109,7 +112,29 @@ func TestGoldenContract(t *testing.T) {
 		}
 	}
 
+	osrm := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"code":"Ok","routes":[{"distance":4300.5,"duration":720,"geometry":"_p~iF~ps|U_ulLnnqC_mqNvxq` + "`" + `@","legs":[{"steps":[{"distance":300,"duration":40,"name":"Nguyễn Huệ","maneuver":{"type":"turn","modifier":"right","location":[106.70,10.77]}},{"distance":0,"duration":0,"name":"Lê Lợi","maneuver":{"type":"arrive","location":[106.72,10.79]}}]}]}]}`))
+	}))
+	defer osrm.Close()
+	e.api.Router = maps.NewRouter(osrm.URL)
+	e.api.TileBase = "http://tiles.local:3000"
+	e.api.Client.TileStyleURL, e.api.Client.RoutingOn, e.api.Client.SearchOn = "/v1/map/style/{theme}", true, true
+	for _, ddl := range []string{
+		`CREATE EXTENSION IF NOT EXISTS unaccent`,
+		`CREATE TABLE places (name text, kind text, rank int, lat float8, lng float8, name_norm text)`,
+		`INSERT INTO places VALUES ('Nhà thờ Đức Bà','tourism',3,10.7798,106.6990,lower(unaccent('Nhà thờ Đức Bà')))`,
+	} {
+		if _, err := e.pool.Exec(context.Background(), ddl); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.api.Geocoder = &maps.Geocoder{DB: e.pool}
+
 	owner, a := e.newUser(t, "owner"), e.newUser(t, "an")
+	save("route", e.mustCall(t, a, "POST", "/v1/route", map[string]any{"from": map[string]any{"lat": 10.77, "lng": 106.7}, "to": map[string]any{"lat": 10.79, "lng": 106.72}, "alternatives": true}, 200))
+	save("geocode", e.mustCall(t, a, "GET", "/v1/geocode?q=duc+ba", nil, 200))
+	_, cfg := do(t, "GET", e.srv.URL+"/v1/config", nil, nil)
+	save("config", cfg)
 	e.consent(t, owner)
 	e.consent(t, a)
 

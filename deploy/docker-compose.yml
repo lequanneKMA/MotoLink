@@ -95,4 +95,30 @@ services:
     depends_on: { server: { condition: service_healthy } }
     stop_grace_period: 30s
 
-volumes: { pg_data: {}, kafka_data: {} }
+  # ---- self-hosted maps (profile "maps"); data comes from maps/prepare.sh, see maps/README.md ----
+  osrm:
+    profiles: ["maps"]
+    image: ghcr.io/project-osrm/osrm-backend
+    command: osrm-routed --algorithm mld --max-table-size 100 /data/vietnam-latest.osrm
+    volumes: ["./maps/data:/data:ro"]
+    ports: ["5000:5000"]
+    restart: unless-stopped
+
+  tiles:
+    profiles: ["maps"]
+    image: ghcr.io/maplibre/martin
+    command: --config /martin.yaml
+    volumes: ["./maps/martin.yaml:/martin.yaml:ro", "./maps/data:/data:ro", "./maps/fonts:/fonts:ro"]
+    ports: ["3000:3000"]
+    restart: unless-stopped
+
+  osmdb:
+    profiles: ["maps"]
+    image: postgis/postgis:16-3.4
+    environment: { POSTGRES_USER: osm, POSTGRES_PASSWORD: osm, POSTGRES_DB: osm }
+    volumes: ["osm_data:/var/lib/postgresql/data"]
+    ports: ["5433:5432"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U osm -d osm"], interval: 5s, timeout: 3s, retries: 20 }
+    restart: unless-stopped
+
+volumes: { pg_data: {}, kafka_data: {}, osm_data: {} }

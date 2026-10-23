@@ -20,6 +20,7 @@ import (
 	"motolink/internal/httpapi"
 	"motolink/internal/identity"
 	"motolink/internal/jobs"
+	"motolink/internal/maps"
 	"motolink/internal/notify"
 	"motolink/internal/platform/config"
 	"motolink/internal/platform/httpx"
@@ -148,8 +149,26 @@ func run(args []string) error {
 		sessions := tracking.NewService(pool, trips, svc, nil)
 		sosSvc = sos.NewService(pool, trips, nil)
 		apiTrips, apiSessions = trips, sessions
-		a := &httpapi.API{Identity: svc, Trips: trips, Sessions: sessions, SOS: sosSvc, Notifications: notifySvc, DB: pool, Limiter: limiter, Log: log,
-			TrustedProxyHops: cfg.TrustedProxyHops, Client: httpapi.DefaultClientConfig(), Registerer: reg.Reg, Points: writer, Telemetry: httpapi.NewPromTelemetry(reg.Reg)}
+		var router *maps.Router
+		if cfg.OSRMURL != "" {
+			router = maps.NewRouter(cfg.OSRMURL)
+		}
+		var geocoder *maps.Geocoder
+		if cfg.GeocodeDatabaseURL != "" {
+			gpool, err := pg.NewPool(ctx, cfg.GeocodeDatabaseURL, 4)
+			if err != nil {
+				return fmt.Errorf("geocode database: %w", err)
+			}
+			defer gpool.Close()
+			geocoder = &maps.Geocoder{DB: gpool}
+		}
+		clientCfg := httpapi.DefaultClientConfig()
+		clientCfg.RoutingOn, clientCfg.SearchOn = router != nil, geocoder != nil
+		if cfg.TileBaseURL != "" {
+			clientCfg.TileStyleURL = "/v1/map/style/{theme}"
+		}
+		a := &httpapi.API{Router: router, Geocoder: geocoder, TileBase: cfg.TileBaseURL, Identity: svc, Trips: trips, Sessions: sessions, SOS: sosSvc, Notifications: notifySvc, DB: pool, Limiter: limiter, Log: log,
+			TrustedProxyHops: cfg.TrustedProxyHops, Client: clientCfg, Registerer: reg.Reg, Points: writer, Telemetry: httpapi.NewPromTelemetry(reg.Reg)}
 		root.Handle("/v1/", a.Handler())
 
 		if cfg.Roles.WS {

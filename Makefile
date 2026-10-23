@@ -1,4 +1,4 @@
-.PHONY: build test test-int lint up down infra migrate tidy
+.PHONY: maps-data maps-up build test test-int lint up down infra migrate tidy
 SERVER=server
 
 build:   ; cd $(SERVER) && go build ./...
@@ -11,3 +11,5 @@ infra:   ; docker compose -f deploy/docker-compose.yml up -d postgres redis kafk
 up:      ; docker compose -f deploy/docker-compose.yml up -d --build
 down:    ; docker compose -f deploy/docker-compose.yml down
 migrate: ; cd $(SERVER) && go run ./cmd/server migrate up
+maps-data: ; deploy/maps/prepare.sh
+maps-up:   ; docker compose -f deploy/docker-compose.yml --profile maps up -d

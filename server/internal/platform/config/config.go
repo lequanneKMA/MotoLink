@@ -49,6 +49,10 @@ type Config struct {
 	RetentionFullresDays   int // raw GPS points are kept this many days after a session ended (docs/design/05 §6)
 	RetentionPartitionDays int // whole monthly partitions older than this are dropped
 
+	OSRMURL            string // osrm-routed base URL; empty disables routing
+	TileBaseURL        string // tile server (Martin) base URL as clients reach it; empty disables the self-hosted basemap
+	GeocodeDatabaseURL string // PostgreSQL with the OSM `places` table; empty disables place search
+
 	ShutdownTimeout time.Duration
 }
 

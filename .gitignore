@@ -5,3 +5,5 @@ deploy/.env
 .idea/
 .vscode/
 node_modules/
+deploy/maps/data/
+deploy/maps/fonts/

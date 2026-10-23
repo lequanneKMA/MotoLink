@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"motolink/internal/identity"
+	"motolink/internal/maps"
 	"motolink/internal/platform/ratelimit"
 	"motolink/internal/sos"
 	"motolink/internal/tracking"
@@ -19,7 +20,9 @@ type ClientConfig struct {
 	MinAppVersion string `json:"min_app_version"`
 	WSVMin        int    `json:"ws_v_min"`
 	WSVMax        int    `json:"ws_v_max"`
-	TileStyleURL  string `json:"tile_style_url"` // empty until the map spike (M1-T06) decides the source
+	TileStyleURL  string `json:"tile_style_url"` // path template ("/v1/map/style/{theme}") when the self-hosted tile stack is configured
+	RoutingOn     bool   `json:"routing_enabled"`
+	SearchOn      bool   `json:"search_enabled"`
 	Limits        Limits `json:"limits"`
 }
 
@@ -49,6 +52,9 @@ type API struct {
 	Registerer       prometheus.Registerer // optional
 	Telemetry        TelemetrySink         // optional: client quality samples
 	SOS              *sos.Service
+	Router           *maps.Router   // nil: routing disabled
+	Geocoder         *maps.Geocoder // nil: place search disabled
+	TileBase         string         // base URL of the tile server (Martin); empty: no self-hosted basemap
 	Notifications    NotificationStore
 	Points           PointWriter // durable point writer for POST .../points (nil → 503)
 
@@ -89,6 +95,7 @@ func (a *API) Handler() http.Handler {
 	if a.SOS != nil {
 		a.sosRoutes(mux)
 	}
+	a.mapRoutes(mux)
 	if a.Notifications != nil {
 		a.notificationRoutes(mux)
 	}

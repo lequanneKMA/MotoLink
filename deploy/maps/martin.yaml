@@ -1,0 +1,7 @@
+# Martin tile server: serves data/vietnam.mbtiles as /vietnam/{z}/{x}/{y} and fonts as /font/{fontstack}/{range}.
+listen_addresses: '0.0.0.0:3000'
+mbtiles:
+  paths:
+    - /data
+fonts:
+  - /fonts
