@@ -86,6 +86,9 @@ abstract class PointDao {
     @Query("SELECT * FROM track_point WHERE session_id = :sessionId ORDER BY seq")
     abstract fun observe(sessionId: String): Flow<List<TrackPointEntity>>
 
+    @Query("SELECT * FROM track_point WHERE session_id = :sessionId ORDER BY seq DESC LIMIT 1")
+    abstract fun observeLast(sessionId: String): Flow<TrackPointEntity?>
+
     @Query("SELECT COUNT(*) FROM track_point WHERE session_id = :sessionId")
     abstract fun observeCount(sessionId: String): Flow<Int>
 

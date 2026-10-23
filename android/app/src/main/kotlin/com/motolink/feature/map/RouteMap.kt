@@ -44,7 +44,7 @@ private const val ROUTE_SRC = "route-src"
 private const val HEAD_SRC = "head-src"
 
 @Composable
-fun RouteMap(points: List<LatLng>, modifier: Modifier = Modifier, followLatest: Boolean = true, styleUrl: String? = null) {
+fun RouteMap(points: List<LatLng>, modifier: Modifier = Modifier, followLatest: Boolean = true, styleUrl: String? = null, dark: Boolean = false) {
     val ctx = LocalContext.current
     val mapView = remember { createMapView(ctx) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -71,10 +71,10 @@ fun RouteMap(points: List<LatLng>, modifier: Modifier = Modifier, followLatest: 
         }
     }
 
-    LaunchedEffect(mapView, styleUrl) {
+    LaunchedEffect(mapView, styleUrl, dark) {
         mapView.getMapAsync { m ->
             map = m
-            val builder = if (styleUrl.isNullOrBlank()) Style.Builder().fromJson(BLANK_STYLE) else Style.Builder().fromUri(styleUrl)
+            val builder = if (styleUrl.isNullOrBlank()) Style.Builder().fromJson(if (dark) BLANK_STYLE.replace("#E6EDE6", "#1B2420") else BLANK_STYLE) else Style.Builder().fromUri(styleUrl)
             m.setStyle(builder) { style ->
                 style.addSource(GeoJsonSource(ROUTE_SRC, FeatureCollection.fromFeatures(emptyList<Feature>())))
                 style.addSource(GeoJsonSource(HEAD_SRC, FeatureCollection.fromFeatures(emptyList<Feature>())))

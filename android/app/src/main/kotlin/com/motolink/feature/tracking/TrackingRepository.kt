@@ -18,6 +18,7 @@ class TrackingRepository(private val db: AppDatabase, private val clock: Clock =
     val openSession: Flow<LocalSessionEntity?> = db.sessions().observeOpen()
     fun recentSessions(limit: Int = 50): Flow<List<LocalSessionEntity>> = db.sessions().observeRecent(limit)
     fun points(sessionId: String): Flow<List<TrackPointEntity>> = db.points().observe(sessionId)
+    fun lastPoint(sessionId: String): Flow<TrackPointEntity?> = db.points().observeLast(sessionId)
     fun pointCount(sessionId: String): Flow<Int> = db.points().observeCount(sessionId)
     val pendingCount: Flow<Int> = db.points().observePendingCount()
 

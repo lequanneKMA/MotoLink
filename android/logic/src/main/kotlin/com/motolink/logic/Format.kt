@@ -17,3 +17,23 @@ object Format {
 
     fun speedKmh(mps: Double): String = String.format(Locale.US, "%.1f km/h", mps * 3.6)
 }
+
+/** Wording shown while riding. Vietnamese decimal comma, short units; independent of the device locale. */
+object RideText {
+    /** "850 m", "1,2 km", "12 km" */
+    fun distance(m: Double): String = when {
+        m < 1000 -> "${(Math.round(m / 10.0) * 10).coerceAtLeast(0)} m".let { if (m < 100) "${m.toInt().coerceAtLeast(0)} m" else it }
+        m < 10_000 -> String.format(Locale.US, "%.1f km", m / 1000).replace('.', ',')
+        else -> "${Math.round(m / 1000.0)} km"
+    }
+
+    /** "30 giây", "2 phút", "1 giờ 5 phút" */
+    fun silence(seconds: Long): String {
+        val s = seconds.coerceAtLeast(0)
+        return when {
+            s < 60 -> "$s giây"
+            s < 3600 -> "${s / 60} phút"
+            else -> "${s / 3600} giờ ${(s % 3600) / 60} phút"
+        }
+    }
+}

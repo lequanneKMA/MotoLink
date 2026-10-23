@@ -28,6 +28,7 @@ data class HomeUi(
     val stats: RouteStats = RouteStats(0.0, 0, 0.0, 0),
     val pending: Int = 0,
     val gpsAvailable: Boolean = true,
+    val speedKmh: Int? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -52,6 +53,7 @@ class HomeViewModel(private val repo: TrackingRepository) : ViewModel() {
             stats = RouteMath.stats(fixes),
             pending = pending,
             gpsAvailable = gps,
+            speedKmh = points.lastOrNull()?.speedMps?.let { Math.round(it * 3.6).toInt() },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUi())
 

@@ -1,20 +1,39 @@
 package com.motolink.feature.map
 
-import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.motolink.ui.MemberAvatar
+import com.motolink.ui.Palette
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -22,31 +41,48 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.PropertyFactory
-import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.Feature
-import org.maplibre.geojson.FeatureCollection
-import org.maplibre.geojson.Point
-
-/** A member marker. [fade] dims stale/lost positions; names are shown in the list next to the map (no glyphs without a basemap). */
-data class MapMarker(val id: String, val at: LatLng, val colorHex: String, val fade: Float = 1f, val isSos: Boolean = false)
-
-private const val BLANK_STYLE = """{"version":8,"name":"blank","sources":{},"layers":[{"id":"bg","type":"background","paint":{"background-color":"#E6EDE6"}}]}"""
-private const val MARKERS = "markers-src"
 
 /**
- * Members of a trip on a map. Same basemap policy as [RouteMap] (ADR-014, D-15): blank until a style URL is configured.
- * Package names assume MapLibre Native 13.x [CHƯA XÁC MINH].
+ * A member (or SOS) on the map. [selfArrow] draws the rider's own heading arrow instead of an initial.
+ * Markers are Compose overlays positioned from the map projection, so they can carry letters and labels without
+ * a glyph server (the basemap itself is still undecided, ADR-014 / D-15).
+ */
+data class MapMarker(
+    val id: String,
+    val at: LatLng,
+    val initial: String,
+    val color: Color,
+    val fade: Float = 1f,
+    val label: String? = null,
+    val isSos: Boolean = false,
+    val selfArrow: Boolean = false,
+)
+
+private fun blankStyle(dark: Boolean): String {
+    val bg = if (dark) "#1B2420" else "#E9EEE6"
+    return """{"version":8,"name":"blank","sources":{},"layers":[{"id":"bg","type":"background","paint":{"background-color":"$bg"}}]}"""
+}
+
+/**
+ * Members of a trip on a map. Package names assume MapLibre Native 13.x [CHƯA XÁC MINH].
+ * [fitSignal] > 0 and changing re-frames everybody; the first non-empty marker set is framed automatically.
  */
 @Composable
-fun LiveMap(markers: List<MapMarker>, fitSignal: Int, modifier: Modifier = Modifier, styleUrl: String? = null) {
+fun LiveMap(
+    markers: List<MapMarker>,
+    fitSignal: Int,
+    modifier: Modifier = Modifier,
+    dark: Boolean = false,
+    styleUrl: String? = null,
+    onMarkerClick: ((String) -> Unit)? = null,
+) {
     val ctx = LocalContext.current
+    val density = LocalDensity.current
     val mapView = remember { MapLibre.getInstance(ctx.applicationContext); MapView(ctx).also { it.onCreate(null) } }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleReady by remember { mutableStateOf(false) }
     var fittedOnce by remember { mutableStateOf(false) }
+    var cameraTick by remember { mutableIntStateOf(0) }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, mapView) {
@@ -68,57 +104,69 @@ fun LiveMap(markers: List<MapMarker>, fitSignal: Int, modifier: Modifier = Modif
         }
     }
 
-    LaunchedEffect(mapView, styleUrl) {
+    LaunchedEffect(mapView, styleUrl, dark) {
         mapView.getMapAsync { m ->
             map = m
-            val builder = if (styleUrl.isNullOrBlank()) Style.Builder().fromJson(BLANK_STYLE) else Style.Builder().fromUri(styleUrl)
-            m.setStyle(builder) { style ->
-                style.addSource(GeoJsonSource(MARKERS, FeatureCollection.fromFeatures(emptyList<Feature>())))
-                style.addLayer(
-                    CircleLayer("marker-sos-ring", MARKERS).withFilter(Expression.eq(Expression.get("sos"), true)).withProperties(
-                        PropertyFactory.circleColor("#D50000"), PropertyFactory.circleOpacity(0.25f), PropertyFactory.circleRadius(22f),
-                    ),
-                )
-                style.addLayer(
-                    CircleLayer("marker-dot", MARKERS).withProperties(
-                        PropertyFactory.circleColor(Expression.toColor(Expression.get("color"))),
-                        PropertyFactory.circleOpacity(Expression.get("fade")),
-                        PropertyFactory.circleRadius(9f),
-                        PropertyFactory.circleStrokeColor("#FFFFFF"), PropertyFactory.circleStrokeWidth(2.5f),
-                    ),
-                )
-                styleReady = true
-            }
+            m.uiSettings.isLogoEnabled = false
+            m.uiSettings.isAttributionEnabled = true
+            m.addOnCameraMoveListener { cameraTick++ }
+            m.addOnCameraIdleListener { cameraTick++ }
+            val builder = if (styleUrl.isNullOrBlank()) Style.Builder().fromJson(blankStyle(dark)) else Style.Builder().fromUri(styleUrl)
+            m.setStyle(builder) { styleReady = true; cameraTick++ }
         }
     }
 
     LaunchedEffect(markers, styleReady, map) {
         val m = map ?: return@LaunchedEffect
         if (!styleReady) return@LaunchedEffect
-        m.getStyle { style ->
-            val fc = FeatureCollection.fromFeatures(
-                markers.map {
-                    Feature.fromGeometry(Point.fromLngLat(it.at.longitude, it.at.latitude)).also { f ->
-                        f.addStringProperty("color", it.colorHex)
-                        f.addNumberProperty("fade", it.fade)
-                        f.addBooleanProperty("sos", it.isSos)
-                    }
-                },
-            )
-            style.getSourceAs<GeoJsonSource>(MARKERS)?.setGeoJson(fc)
-        }
+        cameraTick++
         if (!fittedOnce && markers.isNotEmpty()) {
             fittedOnce = true
             fit(m, markers)
         }
     }
-    // Explicit "fit everyone" request from the UI.
     LaunchedEffect(fitSignal) {
         val m = map ?: return@LaunchedEffect
         if (fitSignal > 0 && markers.isNotEmpty()) fit(m, markers)
     }
 
-    AndroidView(factory = { mapView }, modifier = modifier.fillMaxSize())
+    Box(modifier.fillMaxSize()) {
+        AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
+        val m = map
+        if (m != null && styleReady) {
+            val tick = cameraTick // reading the state makes the overlay follow every camera change
+            if (tick < 0) return@Box
+            markers.forEach { mk ->
+                val p = runCatching { m.projection.toScreenLocation(mk.at) }.getOrNull() ?: return@forEach
+                val half = with(density) { (if (mk.isSos) 36.dp else 20.dp).roundToPx() }
+                Box(
+                    Modifier.offset { IntOffset(p.x.toInt() - half, p.y.toInt() - half) }
+                        .let { if (onMarkerClick != null) it.clickable { onMarkerClick(mk.id) } else it },
+                    contentAlignment = Alignment.Center,
+                ) { MarkerView(mk) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarkerView(mk: MapMarker) {
+    Box(contentAlignment = Alignment.Center) {
+        if (mk.isSos) Box(Modifier.size(72.dp).background(Palette.Red.copy(alpha = 0.22f), CircleShape))
+        if (mk.selfArrow) {
+            Box(Modifier.size(40.dp).background(mk.color, CircleShape).padding(2.dp), contentAlignment = Alignment.Center) {
+                Text("▲", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            }
+        } else {
+            MemberAvatar(mk.initial, if (mk.isSos) Palette.Red else mk.color, size = 40.dp, alpha = mk.fade)
+        }
+        mk.label?.let {
+            Text(
+                it, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1,
+                modifier = Modifier.offset(y = 38.dp).alpha(mk.fade).background(Color(0xCC111111), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+        }
+    }
 }
 
 private fun fit(m: MapLibreMap, markers: List<MapMarker>) {
@@ -126,6 +174,6 @@ private fun fit(m: MapLibreMap, markers: List<MapMarker>) {
         m.easeCamera(CameraUpdateFactory.newLatLngZoom(markers.first().at, 15.0))
     } else {
         val b = LatLngBounds.Builder().also { bb -> markers.forEach { bb.include(it.at) } }.build()
-        m.easeCamera(CameraUpdateFactory.newLatLngBounds(b, 96))
+        m.easeCamera(CameraUpdateFactory.newLatLngBounds(b, 140))
     }
 }

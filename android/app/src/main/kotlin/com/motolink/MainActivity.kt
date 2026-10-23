@@ -20,7 +20,8 @@ import androidx.navigation.compose.rememberNavController
 import com.motolink.feature.auth.LoginScreen
 import com.motolink.feature.notifications.AppNotifications
 import com.motolink.feature.notifications.NotificationsScreen
-import com.motolink.feature.trips.TripDetailScreen
+import com.motolink.feature.trips.CreateTripScreen
+import com.motolink.feature.trips.RideScreen
 import com.motolink.feature.trips.TripsScreen
 import com.motolink.feature.auth.RegisterScreen
 import com.motolink.feature.home.HistoryDetailScreen
@@ -64,6 +65,7 @@ private object Routes {
     const val HISTORY_DETAIL = "history/{id}"
     const val SETTINGS = "settings"
     const val TRIPS = "trips"
+    const val NEW_TRIP = "trips/new"
     const val TRIP = "trip/{id}?sos={sos}"
     const val NOTIFICATIONS = "notifications"
     fun trip(id: String, sos: Boolean = false) = "trip/" + java.net.URLEncoder.encode(id, "UTF-8") + "?sos=" + sos
@@ -115,9 +117,12 @@ private fun AppNav(link: DeepLink?, onLinkHandled: () -> Unit) {
         }
         composable(Routes.TRIPS) {
             TripsScreen(
-                onBack = { nav.popBackStack() }, onOpen = { nav.navigate(Routes.trip(it)) },
-                signedIn = signedIn, onLogin = { nav.navigate(Routes.LOGIN) },
+                onOpen = { nav.navigate(Routes.trip(it)) }, onNew = { nav.navigate(Routes.NEW_TRIP) },
+                onSettings = { nav.navigate(Routes.SETTINGS) }, signedIn = signedIn, onLogin = { nav.navigate(Routes.LOGIN) },
             )
+        }
+        composable(Routes.NEW_TRIP) {
+            CreateTripScreen(onBack = { nav.popBackStack() }, onOpen = { id -> nav.navigate(Routes.trip(id)) { popUpTo(Routes.TRIPS) } })
         }
         composable(
             Routes.TRIP,
@@ -127,7 +132,7 @@ private fun AppNav(link: DeepLink?, onLinkHandled: () -> Unit) {
             ),
         ) { entry ->
             val id = java.net.URLDecoder.decode(entry.arguments?.getString("id").orEmpty(), "UTF-8")
-            TripDetailScreen(tripId = id, onBack = { nav.popBackStack() })
+            RideScreen(tripId = id, onBack = { nav.popBackStack() })
         }
         composable(Routes.NOTIFICATIONS) {
             NotificationsScreen(onBack = { nav.popBackStack() }, onOpenTrip = { nav.navigate(Routes.trip(it)) })
